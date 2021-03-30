@@ -45,7 +45,7 @@ public:
 	SDATA **ds;
 	int *dsa;
 	nlFrame::nlFrame();
-	nlFrame::nlFrame(bool _useblocks, int _size, VideoInfo &vi);
+	nlFrame::nlFrame(bool _useblocks, int _size, VideoInfo &vi, int cpuFlags);
 	nlFrame::~nlFrame();
 	void nlFrame::setFNum(int i);
 };
@@ -56,7 +56,7 @@ public:
 	nlFrame **frames;
 	int start_pos, size;
 	nlCache::nlCache();
-	nlCache::nlCache(int _size, bool _useblocks, VideoInfo &vi);
+	nlCache::nlCache(int _size, bool _useblocks, VideoInfo &vi, int cpuFlags);
 	nlCache::~nlCache();
 	void nlCache::resetCacheStart(int first, int last);
 	int nlCache::getCachePos(int n);

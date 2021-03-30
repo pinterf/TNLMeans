@@ -29,6 +29,7 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
 	GenericVideoFilter(_child), Ax(_Ax), Ay(_Ay), Az(_Az), Sx(_Sx), Sy(_Sy), Bx(_Bx), 
 	By(_By), ms(_ms), a(_a), h(_h), sse(_sse), hclip(_hclip)
 {
+  int cpuFlags = env->GetCPUFlags();
 	fc = fcfs = fchs = NULL;
 	dstPF = srcPFr = NULL;
 	gw = gwh = NULL;
@@ -73,18 +74,18 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
 	Azdm1 = Az*2;
 	a2 = a*a;
 	child->SetCacheHints(CACHE_NOTHING, 0);
-	dstPF = new PlanarFrame(vi);
+	dstPF = new PlanarFrame(vi, cpuFlags);
 	if (ms)
 	{
 		if (Az)
 		{
-			fcfs = new nlCache(Az*2+1,false,vi);
-			fchs = new nlCache(Az*2+1,false,(VideoInfo)hclip->GetVideoInfo());
+			fcfs = new nlCache(Az*2+1,false,vi, cpuFlags);
+			fchs = new nlCache(Az*2+1,false,(VideoInfo)hclip->GetVideoInfo(), cpuFlags);
 		}
 		else
 		{
-			nlfs = new nlFrame(false,1,vi);
-			nlhs = new nlFrame(false,1,(VideoInfo)hclip->GetVideoInfo());
+			nlfs = new nlFrame(false,1,vi, cpuFlags);
+			nlhs = new nlFrame(false,1,(VideoInfo)hclip->GetVideoInfo(), cpuFlags);
 		}
 		const int Sxh = (Sx+1)>>1;
 		const int Syh = (Sy+1)>>1;
@@ -109,8 +110,8 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
 	}
 	else
 	{
-		if (Az) fc = new nlCache(Az*2+1,(Bx>0||By>0),vi);
-		else srcPFr = new PlanarFrame(vi);
+		if (Az) fc = new nlCache(Az*2+1,(Bx>0||By>0),vi, cpuFlags);
+		else srcPFr = new PlanarFrame(vi, cpuFlags);
 		if (Bx || By)
 		{
 			sumsb = (double *)_aligned_malloc(Bxa*sizeof(double),16);
@@ -1106,10 +1107,10 @@ nlFrame::nlFrame()
 	dsa = NULL;
 }
 
-nlFrame::nlFrame(bool _useblocks, int _size, VideoInfo &vi)
+nlFrame::nlFrame(bool _useblocks, int _size, VideoInfo &vi, int cpuFlags)
 {
 	fnum = -20;
-	pf = new PlanarFrame(vi);
+	pf = new PlanarFrame(vi, cpuFlags);
 	ds = NULL;
 	dsa = NULL;
 	if (!_useblocks)
@@ -1155,7 +1156,7 @@ nlCache::nlCache()
 	start_pos = size = -20;
 }
 
-nlCache::nlCache(int _size, bool _useblocks, VideoInfo &vi)
+nlCache::nlCache(int _size, bool _useblocks, VideoInfo &vi, int cpuFlags)
 {
 	frames = NULL;
 	start_pos = size = -20;
@@ -1166,7 +1167,7 @@ nlCache::nlCache(int _size, bool _useblocks, VideoInfo &vi)
 		frames = (nlFrame**)malloc(size*sizeof(nlFrame*));
 		memset(frames, 0, size*sizeof(nlFrame*));
 		for (int i=0; i<size; ++i)
-			frames[i] = new nlFrame(_useblocks, _size, vi);
+			frames[i] = new nlFrame(_useblocks, _size, vi, cpuFlags);
 	}
 }
 
