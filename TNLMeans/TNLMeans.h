@@ -22,8 +22,6 @@
 **   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include <windows.h>
-#define _USE_MATH_DEFINES
 #include <math.h>
 #include <malloc.h>
 #include <float.h>
@@ -44,10 +42,10 @@ public:
   PlanarFrame* pf;
   SDATA** ds;
   int* dsa;
-  nlFrame::nlFrame();
-  nlFrame::nlFrame(bool _useblocks, int _size, VideoInfo& vi, int cpuFlags);
-  nlFrame::~nlFrame();
-  void nlFrame::setFNum(int i);
+  nlFrame();
+  nlFrame(bool _useblocks, int _size, VideoInfo& vi, int cpuFlags);
+  ~nlFrame();
+  void setFNum(int i);
 };
 
 class nlCache
@@ -55,12 +53,12 @@ class nlCache
 public:
   nlFrame** frames;
   int start_pos, size;
-  nlCache::nlCache();
-  nlCache::nlCache(int _size, bool _useblocks, VideoInfo& vi, int cpuFlags);
-  nlCache::~nlCache();
-  void nlCache::resetCacheStart(int first, int last);
-  int nlCache::getCachePos(int n);
-  void nlCache::clearDS(nlFrame* nl);
+  nlCache();
+  nlCache(int _size, bool _useblocks, VideoInfo& vi, int cpuFlags);
+  ~nlCache();
+  void resetCacheStart(int first, int last);
+  int getCachePos(int n);
+  void clearDS(nlFrame* nl);
 };
 
 class TNLMeans : public GenericVideoFilter
@@ -80,41 +78,41 @@ private:
   PlanarFrame* dstPF, * srcPFr;
   nlFrame* nlfs, * nlhs;
   PClip hclip;
-  int TNLMeans::mapn(int n);
-  PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall TNLMeans::GetFrameWOZ(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall TNLMeans::GetFrameWOZB(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall TNLMeans::GetFrameWZ_SAD(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall TNLMeans::GetFrameWZB_SAD(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall TNLMeans::GetFrameWOZ_SAD(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall TNLMeans::GetFrameWOZB_SAD(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall TNLMeans::GetFrameNT_MS(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall TNLMeans::GetFrameT_MS(int n, IScriptEnvironment* env);
-  void TNLMeans::MSWOZ(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
+  int mapn(int n);
+  PVideoFrame __stdcall GetFrameWZ(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrameWZB(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrameWOZ(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrameWOZB(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrameWZ_SAD(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrameWZB_SAD(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrameWOZ_SAD(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrameWOZB_SAD(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrameNT_MS(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrameT_MS(int n, IScriptEnvironment* env);
+  void MSWOZ(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     const int Syi, const double* gwi);
-  void TNLMeans::MSWOZB(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
+  void MSWOZB(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     const int Syi, const int Bxi, const int Byi, const double* gwi);
-  void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
+  void MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
     const int Syi, const double* gwi, int n, bool hc, IScriptEnvironment* env);
-  void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
+  void MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
     const int Syi, const int Bxi, const int Byi, const double* gwi, int n, bool hc,
     IScriptEnvironment* env);
-  void TNLMeans::MSWOZ_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
+  void MSWOZ_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     const int Syi, const double* gwi);
-  void TNLMeans::MSWOZB_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
+  void MSWOZB_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     const int Syi, const int Bxi, const int Byi, const double* gwi);
-  void TNLMeans::MSWZ_SAD(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
+  void MSWZ_SAD(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
     const int Syi, const double* gwi, int n, bool hc, IScriptEnvironment* env);
-  void TNLMeans::MSWZB_SAD(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
+  void MSWZB_SAD(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
     const int Syi, const int Bxi, const int Byi, const double* gwi, int n, bool hc,
     IScriptEnvironment* env);
-  void TNLMeans::combineMSWeights(PlanarFrame* dst, nlFrame* fs, nlFrame* hs);
+  void combineMSWeights(PlanarFrame* dst, nlFrame* fs, nlFrame* hs);
 
 public:
-  PVideoFrame __stdcall TNLMeans::GetFrame(int n, IScriptEnvironment* env);
-  TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy,
+  PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env);
+  TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy,
     int _Bx, int _By, bool _ms, double _a, double _h, bool _sse, PClip _hclip,
     IScriptEnvironment* env);
-  TNLMeans::~TNLMeans();
+  ~TNLMeans();
 };

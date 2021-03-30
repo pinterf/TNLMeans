@@ -23,11 +23,17 @@
 */
 
 #include "TNLMeans.h"
+#include <algorithm>
+#include <cstring>
+#include "common.h"
 
 PVideoFrame __stdcall TNLMeans::GetFrameNT_MS(int n, IScriptEnvironment* env)
 {
-  nlfs->pf->copyFrom(child->GetFrame(n, env), vi);
-  nlhs->pf->copyFrom(hclip->GetFrame(n, env), (VideoInfo)hclip->GetVideoInfo());
+  PVideoFrame src = child->GetFrame(n, env);
+  nlfs->pf->copyFrom(src, vi);
+  PVideoFrame src_h = hclip->GetFrame(n, env);
+  VideoInfo vi_h = hclip->GetVideoInfo();
+  nlhs->pf->copyFrom(src_h, vi_h);
   if (Bx || By)
   {
     if (sse)
@@ -98,15 +104,15 @@ void TNLMeans::combineMSWeights(PlanarFrame* dst, nlFrame* fs, nlFrame* hs)
 {
   for (int b = 0; b < 3; ++b)
   {
-    unsigned char* dstp = dst->GetPtr(b);
+    uint8_t* dstp = dst->GetPtr(b);
     const int dst_pitch = dst->GetPitch(b);
-    unsigned char* dstpn = dstp + dst_pitch;
+    uint8_t* dstpn = dstp + dst_pitch;
     const int width = dst->GetWidth(b);
     const int height = dst->GetHeight(b);
-    const unsigned char* srcp = fs->pf->GetPtr(b);
+    const uint8_t* srcp = fs->pf->GetPtr(b);
     const int src_pitch = fs->pf->GetPitch(b);
-    const unsigned char* srcpn = srcp + src_pitch;
-    const unsigned char* srcph = hs->pf->GetPtr(b);
+    const uint8_t* srcpn = srcp + src_pitch;
+    const uint8_t* srcph = hs->pf->GetPtr(b);
     const int srch_pitch = hs->pf->GetPitch(b);
     const double* hsw = hs->ds[b]->weights;
     const double* hss = hs->ds[b]->sums;
@@ -144,19 +150,19 @@ void TNLMeans::combineMSWeights(PlanarFrame* dst, nlFrame* fs, nlFrame* hs)
         if (fswm[x] <= DBL_EPSILON) fswm[x] = 1.0;
         fsw[x] += fswm[x];
         fss[x] += srcp[x] * fswm[x];
-        dstp[x] = max(min(int((fss[x] / fsw[x]) + 0.5), 255), 0);
+        dstp[x] = std::max(std::min(int((fss[x] / fsw[x]) + 0.5), 255), 0);
         if (fswm[x + 1] <= DBL_EPSILON) fswm[x + 1] = 1.0;
         fsw[x + 1] += fswm[x + 1];
         fss[x + 1] += srcp[x + 1] * fswm[x + 1];
-        dstp[x + 1] = max(min(int((fss[x + 1] / fsw[x + 1]) + 0.5), 255), 0);
+        dstp[x + 1] = std::max(std::min(int((fss[x + 1] / fsw[x + 1]) + 0.5), 255), 0);
         if (fswmn[x] <= DBL_EPSILON) fswmn[x] = 1.0;
         fswn[x] += fswmn[x];
         fssn[x] += srcpn[x] * fswmn[x];
-        dstpn[x] = max(min(int((fssn[x] / fswn[x]) + 0.5), 255), 0);
+        dstpn[x] = std::max(std::min(int((fssn[x] / fswn[x]) + 0.5), 255), 0);
         if (fswmn[x + 1] <= DBL_EPSILON) fswmn[x + 1] = 1.0;
         fswn[x + 1] += fswmn[x + 1];
         fssn[x + 1] += srcpn[x + 1] * fswmn[x + 1];
-        dstpn[x + 1] = max(min(int((fssn[x + 1] / fswn[x + 1]) + 0.5), 255), 0);
+        dstpn[x + 1] = std::max(std::min(int((fssn[x + 1] / fswn[x + 1]) + 0.5), 255), 0);
       }
       dstp += dst_pitch << 1;
       dstpn += dst_pitch << 1;
@@ -183,8 +189,8 @@ void TNLMeans::MSWOZ(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
   const int Sxdi = Sxi * 2 + 1;
   for (int b = 0; b < 3; ++b)
   {
-    const unsigned char* srcp = srcPF->GetPtr(b);
-    const unsigned char* pfp = srcPF->GetPtr(b);
+    const uint8_t* srcp = srcPF->GetPtr(b);
+    const uint8_t* pfp = srcPF->GetPtr(b);
     const int pitch = srcPF->GetPitch(b);
     const int height = srcPF->GetHeight(b);
     const int heightm1 = height - 1;
@@ -196,12 +202,12 @@ void TNLMeans::MSWOZ(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     memset(dds->wmaxs, 0, height * width * sizeof(double));
     for (int y = 0; y < height; ++y)
     {
-      const int stopy = min(y + Ayi, heightm1);
+      const int stopy = std::min(y + Ayi, heightm1);
       const int doffy = y * width;
       for (int x = 0; x < width; ++x)
       {
-        const int startxt = max(x - Axi, 0);
-        const int stopx = min(x + Axi, widthm1);
+        const int startxt = std::max(x - Axi, 0);
+        const int stopx = std::min(x + Axi, widthm1);
         const int doff = doffy + x;
         double* dsum = &dds->sums[doff];
         double* dweight = &dds->weights[doff];
@@ -209,10 +215,10 @@ void TNLMeans::MSWOZ(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
         for (int u = y; u <= stopy; ++u)
         {
           const int startx = u == y ? x + 1 : startxt;
-          const int yT = -min(min(Syi, u), y);
-          const int yB = min(min(Syi, heightm1 - u), heightm1 - y);
-          const unsigned char* s1_saved = pfp + (u + yT) * pitch;
-          const unsigned char* s2_saved = pfp + (y + yT) * pitch + x;
+          const int yT = -std::min(std::min(Syi, u), y);
+          const int yB = std::min(std::min(Syi, heightm1 - u), heightm1 - y);
+          const uint8_t* s1_saved = pfp + (u + yT) * pitch;
+          const uint8_t* s2_saved = pfp + (y + yT) * pitch + x;
           const double* gwi_saved = gwi + (yT + Syi) * Sxdi + Sxi;
           const int pfpl = u * pitch;
           const int coffy = u * width;
@@ -222,10 +228,10 @@ void TNLMeans::MSWOZ(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
             double* csum = &dds->sums[coff];
             double* cweight = &dds->weights[coff];
             double* cwmax = &dds->wmaxs[coff];
-            const int xL = -min(min(Sxi, v), x);
-            const int xR = min(min(Sxi, widthm1 - v), widthm1 - x);
-            const unsigned char* s1 = s1_saved + v;
-            const unsigned char* s2 = s2_saved;
+            const int xL = -std::min(std::min(Sxi, v), x);
+            const int xR = std::min(std::min(Sxi, widthm1 - v), widthm1 - x);
+            const uint8_t* s1 = s1_saved + v;
+            const uint8_t* s2 = s2_saved;
             const double* gwiT = gwi_saved;
             double diff = 0.0, gweights = 0.0;
             for (int j = yT; j <= yB; ++j)
@@ -261,8 +267,8 @@ void TNLMeans::MSWOZ_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sx
   const int Sxdi = Sxi * 2 + 1;
   for (int b = 0; b < 3; ++b)
   {
-    const unsigned char* srcp = srcPF->GetPtr(b);
-    const unsigned char* pfp = srcPF->GetPtr(b);
+    const uint8_t* srcp = srcPF->GetPtr(b);
+    const uint8_t* pfp = srcPF->GetPtr(b);
     const int pitch = srcPF->GetPitch(b);
     const int height = srcPF->GetHeight(b);
     const int heightm1 = height - 1;
@@ -274,12 +280,12 @@ void TNLMeans::MSWOZ_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sx
     memset(dds->wmaxs, 0, height * width * sizeof(double));
     for (int y = 0; y < height; ++y)
     {
-      const int stopy = min(y + Ayi, heightm1);
+      const int stopy = std::min(y + Ayi, heightm1);
       const int doffy = y * width;
       for (int x = 0; x < width; ++x)
       {
-        const int startxt = max(x - Axi, 0);
-        const int stopx = min(x + Axi, widthm1);
+        const int startxt = std::max(x - Axi, 0);
+        const int stopx = std::min(x + Axi, widthm1);
         const int doff = doffy + x;
         double* dsum = &dds->sums[doff];
         double* dweight = &dds->weights[doff];
@@ -287,10 +293,10 @@ void TNLMeans::MSWOZ_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sx
         for (int u = y; u <= stopy; ++u)
         {
           const int startx = u == y ? x + 1 : startxt;
-          const int yT = -min(min(Syi, u), y);
-          const int yB = min(min(Syi, heightm1 - u), heightm1 - y);
-          const unsigned char* s1_saved = pfp + (u + yT) * pitch;
-          const unsigned char* s2_saved = pfp + (y + yT) * pitch + x;
+          const int yT = -std::min(std::min(Syi, u), y);
+          const int yB = std::min(std::min(Syi, heightm1 - u), heightm1 - y);
+          const uint8_t* s1_saved = pfp + (u + yT) * pitch;
+          const uint8_t* s2_saved = pfp + (y + yT) * pitch + x;
           const double* gwi_saved = gwi + (yT + Syi) * Sxdi + Sxi;
           const int pfpl = u * pitch;
           const int coffy = u * width;
@@ -300,10 +306,10 @@ void TNLMeans::MSWOZ_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sx
             double* csum = &dds->sums[coff];
             double* cweight = &dds->weights[coff];
             double* cwmax = &dds->wmaxs[coff];
-            const int xL = -min(min(Sxi, v), x);
-            const int xR = min(min(Sxi, widthm1 - v), widthm1 - x);
-            const unsigned char* s1 = s1_saved + v;
-            const unsigned char* s2 = s2_saved;
+            const int xL = -std::min(std::min(Sxi, v), x);
+            const int xR = std::min(std::min(Sxi, widthm1 - v), widthm1 - x);
+            const uint8_t* s1 = s1_saved + v;
+            const uint8_t* s2 = s2_saved;
             const double* gwiT = gwi_saved;
             double diff = 0.0, gweights = 0.0;
             for (int j = yT; j <= yB; ++j)
@@ -341,8 +347,8 @@ void TNLMeans::MSWOZB(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
   const int Sxdi = Sxi * 2 + 1;
   for (int b = 0; b < 3; ++b)
   {
-    const unsigned char* srcp = srcPF->GetPtr(b);
-    const unsigned char* pfp = srcPF->GetPtr(b);
+    const uint8_t* srcp = srcPF->GetPtr(b);
+    const uint8_t* pfp = srcPF->GetPtr(b);
     const int pitch = srcPF->GetPitch(b);
     const int height = srcPF->GetHeight(b);
     const int heightm1 = height - 1;
@@ -354,33 +360,33 @@ void TNLMeans::MSWOZB(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     memset(dds->wmaxs, 0, height * width * sizeof(double));
     for (int y = Byi; y < height + Byi; y += Bydi)
     {
-      const int starty = max(y - Ayi, Byi);
-      const int stopy = min(y + Ayi, heightm1 - min(Byi, heightm1 - y));
+      const int starty = std::max(y - Ayi, Byi);
+      const int stopy = std::min(y + Ayi, heightm1 - std::min(Byi, heightm1 - y));
       const int doffy = (y - Byi) * width;
       for (int x = Bxi; x < width + Bxi; x += Bxdi)
       {
-        const int startx = max(x - Axi, Bxi);
-        const int stopx = min(x + Axi, widthm1 - min(Bxi, widthm1 - x));
+        const int startx = std::max(x - Axi, Bxi);
+        const int stopx = std::min(x + Axi, widthm1 - std::min(Bxi, widthm1 - x));
         const int doff = doffy + x;
         double* dsum_saved = dds->sums + doff;
         double* dweight_saved = dds->weights + doff;
         double* dwmax_saved = dds->wmaxs + doff;
         for (int u = starty; u <= stopy; ++u)
         {
-          const int yT = -min(min(Syi, u), y);
-          const int yB = min(min(Syi, heightm1 - u), heightm1 - y);
-          const int yBb = min(min(Byi, heightm1 - u), heightm1 - y);
-          const unsigned char* s1_saved = pfp + (u + yT) * pitch;
-          const unsigned char* s2_saved = pfp + (y + yT) * pitch + x;
-          const unsigned char* sbp_saved = pfp + (u - Byi) * pitch;
+          const int yT = -std::min(std::min(Syi, u), y);
+          const int yB = std::min(std::min(Syi, heightm1 - u), heightm1 - y);
+          const int yBb = std::min(std::min(Byi, heightm1 - u), heightm1 - y);
+          const uint8_t* s1_saved = pfp + (u + yT) * pitch;
+          const uint8_t* s2_saved = pfp + (y + yT) * pitch + x;
+          const uint8_t* sbp_saved = pfp + (u - Byi) * pitch;
           const double* gwi_saved = gwi + (yT + Syi) * Sxdi + Sxi;
           for (int v = startx; v <= stopx; ++v)
           {
             if (u == y && v == x) continue;
-            const int xL = -min(min(Sxi, v), x);
-            const int xR = min(min(Sxi, widthm1 - v), widthm1 - x);
-            const unsigned char* s1 = s1_saved + v;
-            const unsigned char* s2 = s2_saved;
+            const int xL = -std::min(std::min(Sxi, v), x);
+            const int xR = std::min(std::min(Sxi, widthm1 - v), widthm1 - x);
+            const uint8_t* s1 = s1_saved + v;
+            const uint8_t* s2 = s2_saved;
             const double* gwiT = gwi_saved;
             double diff = 0.0, gweights = 0.0;
             for (int j = yT; j <= yB; ++j)
@@ -395,8 +401,8 @@ void TNLMeans::MSWOZB(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
               gwiT += Sxdi;
             }
             const double weight = exp((diff / gweights) * h2in);
-            const int xRb = min(min(Bxi, widthm1 - v), widthm1 - x);
-            const unsigned char* sbp = sbp_saved + v;
+            const int xRb = std::min(std::min(Bxi, widthm1 - v), widthm1 - x);
+            const uint8_t* sbp = sbp_saved + v;
             double* dsum = dsum_saved;
             double* dweight = dweight_saved;
             double* dwmax = dwmax_saved;
@@ -430,8 +436,8 @@ void TNLMeans::MSWOZB_SAD(nlFrame* nl, const int Axi, const int Ayi, const int S
   const int Sxdi = Sxi * 2 + 1;
   for (int b = 0; b < 3; ++b)
   {
-    const unsigned char* srcp = srcPF->GetPtr(b);
-    const unsigned char* pfp = srcPF->GetPtr(b);
+    const uint8_t* srcp = srcPF->GetPtr(b);
+    const uint8_t* pfp = srcPF->GetPtr(b);
     const int pitch = srcPF->GetPitch(b);
     const int height = srcPF->GetHeight(b);
     const int heightm1 = height - 1;
@@ -443,33 +449,33 @@ void TNLMeans::MSWOZB_SAD(nlFrame* nl, const int Axi, const int Ayi, const int S
     memset(dds->wmaxs, 0, height * width * sizeof(double));
     for (int y = Byi; y < height + Byi; y += Bydi)
     {
-      const int starty = max(y - Ayi, Byi);
-      const int stopy = min(y + Ayi, heightm1 - min(Byi, heightm1 - y));
+      const int starty = std::max(y - Ayi, Byi);
+      const int stopy = std::min(y + Ayi, heightm1 - std::min(Byi, heightm1 - y));
       const int doffy = (y - Byi) * width;
       for (int x = Bxi; x < width + Bxi; x += Bxdi)
       {
-        const int startx = max(x - Axi, Bxi);
-        const int stopx = min(x + Axi, widthm1 - min(Bxi, widthm1 - x));
+        const int startx = std::max(x - Axi, Bxi);
+        const int stopx = std::min(x + Axi, widthm1 - std::min(Bxi, widthm1 - x));
         const int doff = doffy + x;
         double* dsum_saved = dds->sums + doff;
         double* dweight_saved = dds->weights + doff;
         double* dwmax_saved = dds->wmaxs + doff;
         for (int u = starty; u <= stopy; ++u)
         {
-          const int yT = -min(min(Syi, u), y);
-          const int yB = min(min(Syi, heightm1 - u), heightm1 - y);
-          const int yBb = min(min(Byi, heightm1 - u), heightm1 - y);
-          const unsigned char* s1_saved = pfp + (u + yT) * pitch;
-          const unsigned char* s2_saved = pfp + (y + yT) * pitch + x;
-          const unsigned char* sbp_saved = pfp + (u - Byi) * pitch;
+          const int yT = -std::min(std::min(Syi, u), y);
+          const int yB = std::min(std::min(Syi, heightm1 - u), heightm1 - y);
+          const int yBb = std::min(std::min(Byi, heightm1 - u), heightm1 - y);
+          const uint8_t* s1_saved = pfp + (u + yT) * pitch;
+          const uint8_t* s2_saved = pfp + (y + yT) * pitch + x;
+          const uint8_t* sbp_saved = pfp + (u - Byi) * pitch;
           const double* gwi_saved = gwi + (yT + Syi) * Sxdi + Sxi;
           for (int v = startx; v <= stopx; ++v)
           {
             if (u == y && v == x) continue;
-            const int xL = -min(min(Sxi, v), x);
-            const int xR = min(min(Sxi, widthm1 - v), widthm1 - x);
-            const unsigned char* s1 = s1_saved + v;
-            const unsigned char* s2 = s2_saved;
+            const int xL = -std::min(std::min(Sxi, v), x);
+            const int xR = std::min(std::min(Sxi, widthm1 - v), widthm1 - x);
+            const uint8_t* s1 = s1_saved + v;
+            const uint8_t* s2 = s2_saved;
             const double* gwiT = gwi_saved;
             double diff = 0.0, gweights = 0.0;
             for (int j = yT; j <= yB; ++j)
@@ -484,8 +490,8 @@ void TNLMeans::MSWOZB_SAD(nlFrame* nl, const int Axi, const int Ayi, const int S
               gwiT += Sxdi;
             }
             const double weight = exp((diff / gweights) * hin);
-            const int xRb = min(min(Bxi, widthm1 - v), widthm1 - x);
-            const unsigned char* sbp = sbp_saved + v;
+            const int xRb = std::min(std::min(Bxi, widthm1 - v), widthm1 - x);
+            const uint8_t* sbp = sbp_saved + v;
             double* dsum = dsum_saved;
             double* dweight = dweight_saved;
             double* dwmax = dwmax_saved;
@@ -521,14 +527,21 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
     nlFrame* nl = fci->frames[fci->getCachePos(i - n + Azi)];
     if (nl->fnum != i)
     {
-      nl->pf->copyFrom(hc ? hclip->GetFrame(mapn(i), env) : child->GetFrame(mapn(i), env),
-        hc ? (VideoInfo)hclip->GetVideoInfo() : vi);
+      if (hc) {
+        PVideoFrame src_h = hclip->GetFrame(mapn(i), env);
+        VideoInfo vi_h = hclip->GetVideoInfo();
+        nl->pf->copyFrom(src_h, vi_h);
+      }
+      else {
+        PVideoFrame src = child->GetFrame(mapn(i), env);
+        nl->pf->copyFrom(src, vi);
+      }
       nl->setFNum(i);
       fci->clearDS(nl);
     }
   }
-  const unsigned char** pfplut =
-    (const unsigned char**)_aligned_malloc(fci->size * sizeof(const unsigned char*), 16);
+  const uint8_t** pfplut =
+    (const uint8_t**)_aligned_malloc(fci->size * sizeof(const uint8_t*), 16);
   if (!pfplut) env->ThrowError("TNLMeans:  malloc failure (pfplut)!");
   const SDATA** dslut =
     (const SDATA**)_aligned_malloc(fci->size * sizeof(SDATA*), 16);
@@ -540,12 +553,12 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
     dsalut[i] = fci->frames[fci->getCachePos(i)]->dsa;
   int* ddsa = dsalut[Azi];
   PlanarFrame* srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
-  const int startz = Azi - min(n, Azi);
-  const int stopz = Azi + min(vi.num_frames - n - 1, Azi);
+  const int startz = Azi - std::min(n, Azi);
+  const int stopz = Azi + std::min(vi.num_frames - n - 1, Azi);
   for (int b = 0; b < 3; ++b)
   {
-    const unsigned char* srcp = srcPF->GetPtr(b);
-    const unsigned char* pf2p = srcPF->GetPtr(b);
+    const uint8_t* srcp = srcPF->GetPtr(b);
+    const uint8_t* pf2p = srcPF->GetPtr(b);
     const int pitch = srcPF->GetPitch(b);
     const int height = srcPF->GetHeight(b);
     const int heightm1 = height - 1;
@@ -560,13 +573,13 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
     const SDATA* dds = dslut[Azi];
     for (int y = 0; y < height; ++y)
     {
-      const int startyt = max(y - Ayi, 0);
-      const int stopy = min(y + Ayi, heightm1);
+      const int startyt = std::max(y - Ayi, 0);
+      const int stopy = std::min(y + Ayi, heightm1);
       const int doffy = y * width;
       for (int x = 0; x < width; ++x)
       {
-        const int startxt = max(x - Axi, 0);
-        const int stopx = min(x + Axi, widthm1);
+        const int startxt = std::max(x - Axi, 0);
+        const int stopx = std::min(x + Axi, widthm1);
         const int doff = doffy + x;
         double* dsum = &dds->sums[doff];
         double* dweight = &dds->weights[doff];
@@ -578,14 +591,14 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
           const int starty = (z == Azi) ? y : startyt;
           const SDATA* cds = dslut[z];
           int* cdsa = dsalut[z];
-          const unsigned char* pf1p = pfplut[z];
+          const uint8_t* pf1p = pfplut[z];
           for (int u = starty; u <= stopy; ++u)
           {
             const int startx = (u == y && z == Azi) ? x + 1 : startxt;
-            const int yT = -min(min(Syi, u), y);
-            const int yB = min(min(Syi, heightm1 - u), heightm1 - y);
-            const unsigned char* s1_saved = pf1p + (u + yT) * pitch;
-            const unsigned char* s2_saved = pf2p + (y + yT) * pitch + x;
+            const int yT = -std::min(std::min(Syi, u), y);
+            const int yB = std::min(std::min(Syi, heightm1 - u), heightm1 - y);
+            const uint8_t* s1_saved = pf1p + (u + yT) * pitch;
+            const uint8_t* s2_saved = pf2p + (y + yT) * pitch + x;
             const double* gwi_saved = gwi + (yT + Syi) * Sxdi + Sxi;
             const int pf1pl = u * pitch;
             const int coffy = u * width;
@@ -595,10 +608,10 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
               double* csum = &cds->sums[coff];
               double* cweight = &cds->weights[coff];
               double* cwmax = &cds->wmaxs[coff];
-              const int xL = -min(min(Sxi, v), x);
-              const int xR = min(min(Sxi, widthm1 - v), widthm1 - x);
-              const unsigned char* s1 = s1_saved + v;
-              const unsigned char* s2 = s2_saved;
+              const int xL = -std::min(std::min(Sxi, v), x);
+              const int xR = std::min(std::min(Sxi, widthm1 - v), widthm1 - x);
+              const uint8_t* s1 = s1_saved + v;
+              const uint8_t* s2 = s2_saved;
               const double* gwiT = gwi_saved;
               double diff = 0.0, gweights = 0.0;
               for (int j = yT; j <= yB; ++j)
@@ -651,14 +664,21 @@ void TNLMeans::MSWZ_SAD(nlCache* fci, const int Axi, const int Ayi, const int Az
     nlFrame* nl = fci->frames[fci->getCachePos(i - n + Azi)];
     if (nl->fnum != i)
     {
-      nl->pf->copyFrom(hc ? hclip->GetFrame(mapn(i), env) : child->GetFrame(mapn(i), env),
-        hc ? (VideoInfo)hclip->GetVideoInfo() : vi);
+      if (hc) {
+        PVideoFrame src_h = hclip->GetFrame(mapn(i), env);
+        VideoInfo vi_h = hclip->GetVideoInfo();
+        nl->pf->copyFrom(src_h, vi_h);
+      }
+      else {
+        PVideoFrame src = child->GetFrame(mapn(i), env);
+        nl->pf->copyFrom(src, vi);
+      }
       nl->setFNum(i);
       fci->clearDS(nl);
     }
   }
-  const unsigned char** pfplut =
-    (const unsigned char**)_aligned_malloc(fci->size * sizeof(const unsigned char*), 16);
+  const uint8_t** pfplut =
+    (const uint8_t**)_aligned_malloc(fci->size * sizeof(const uint8_t*), 16);
   if (!pfplut) env->ThrowError("TNLMeans:  malloc failure (pfplut)!");
   const SDATA** dslut =
     (const SDATA**)_aligned_malloc(fci->size * sizeof(SDATA*), 16);
@@ -670,12 +690,12 @@ void TNLMeans::MSWZ_SAD(nlCache* fci, const int Axi, const int Ayi, const int Az
     dsalut[i] = fci->frames[fci->getCachePos(i)]->dsa;
   int* ddsa = dsalut[Azi];
   PlanarFrame* srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
-  const int startz = Azi - min(n, Azi);
-  const int stopz = Azi + min(vi.num_frames - n - 1, Azi);
+  const int startz = Azi - std::min(n, Azi);
+  const int stopz = Azi + std::min(vi.num_frames - n - 1, Azi);
   for (int b = 0; b < 3; ++b)
   {
-    const unsigned char* srcp = srcPF->GetPtr(b);
-    const unsigned char* pf2p = srcPF->GetPtr(b);
+    const uint8_t* srcp = srcPF->GetPtr(b);
+    const uint8_t* pf2p = srcPF->GetPtr(b);
     const int pitch = srcPF->GetPitch(b);
     const int height = srcPF->GetHeight(b);
     const int heightm1 = height - 1;
@@ -690,13 +710,13 @@ void TNLMeans::MSWZ_SAD(nlCache* fci, const int Axi, const int Ayi, const int Az
     const SDATA* dds = dslut[Azi];
     for (int y = 0; y < height; ++y)
     {
-      const int startyt = max(y - Ayi, 0);
-      const int stopy = min(y + Ayi, heightm1);
+      const int startyt = std::max(y - Ayi, 0);
+      const int stopy = std::min(y + Ayi, heightm1);
       const int doffy = y * width;
       for (int x = 0; x < width; ++x)
       {
-        const int startxt = max(x - Axi, 0);
-        const int stopx = min(x + Axi, widthm1);
+        const int startxt = std::max(x - Axi, 0);
+        const int stopx = std::min(x + Axi, widthm1);
         const int doff = doffy + x;
         double* dsum = &dds->sums[doff];
         double* dweight = &dds->weights[doff];
@@ -708,14 +728,14 @@ void TNLMeans::MSWZ_SAD(nlCache* fci, const int Axi, const int Ayi, const int Az
           const int starty = (z == Azi) ? y : startyt;
           const SDATA* cds = dslut[z];
           int* cdsa = dsalut[z];
-          const unsigned char* pf1p = pfplut[z];
+          const uint8_t* pf1p = pfplut[z];
           for (int u = starty; u <= stopy; ++u)
           {
             const int startx = (u == y && z == Azi) ? x + 1 : startxt;
-            const int yT = -min(min(Syi, u), y);
-            const int yB = min(min(Syi, heightm1 - u), heightm1 - y);
-            const unsigned char* s1_saved = pf1p + (u + yT) * pitch;
-            const unsigned char* s2_saved = pf2p + (y + yT) * pitch + x;
+            const int yT = -std::min(std::min(Syi, u), y);
+            const int yB = std::min(std::min(Syi, heightm1 - u), heightm1 - y);
+            const uint8_t* s1_saved = pf1p + (u + yT) * pitch;
+            const uint8_t* s2_saved = pf2p + (y + yT) * pitch + x;
             const double* gwi_saved = gwi + (yT + Syi) * Sxdi + Sxi;
             const int pf1pl = u * pitch;
             const int coffy = u * width;
@@ -725,10 +745,10 @@ void TNLMeans::MSWZ_SAD(nlCache* fci, const int Axi, const int Ayi, const int Az
               double* csum = &cds->sums[coff];
               double* cweight = &cds->weights[coff];
               double* cwmax = &cds->wmaxs[coff];
-              const int xL = -min(min(Sxi, v), x);
-              const int xR = min(min(Sxi, widthm1 - v), widthm1 - x);
-              const unsigned char* s1 = s1_saved + v;
-              const unsigned char* s2 = s2_saved;
+              const int xL = -std::min(std::min(Sxi, v), x);
+              const int xR = std::min(std::min(Sxi, widthm1 - v), widthm1 - x);
+              const uint8_t* s1 = s1_saved + v;
+              const uint8_t* s2 = s2_saved;
               const double* gwiT = gwi_saved;
               double diff = 0.0, gweights = 0.0;
               for (int j = yT; j <= yB; ++j)
@@ -783,21 +803,28 @@ void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, 
     nlFrame* nl = fci->frames[fci->getCachePos(i - n + Azi)];
     if (nl->fnum != i)
     {
-      nl->pf->copyFrom(hc ? hclip->GetFrame(mapn(i), env) : child->GetFrame(mapn(i), env),
-        hc ? (VideoInfo)hclip->GetVideoInfo() : vi);
+      if (hc) {
+        PVideoFrame src_h = hclip->GetFrame(mapn(i), env);
+        VideoInfo vi_h = hclip->GetVideoInfo();
+        nl->pf->copyFrom(src_h, vi_h);
+      }
+      else {
+        PVideoFrame src = child->GetFrame(mapn(i), env);
+        nl->pf->copyFrom(src, vi);
+      }
       nl->setFNum(i);
     }
   }
-  const unsigned char** pfplut =
-    (const unsigned char**)_aligned_malloc(fci->size * sizeof(const unsigned char*), 16);
+  const uint8_t** pfplut =
+    (const uint8_t**)_aligned_malloc(fci->size * sizeof(const uint8_t*), 16);
   if (!pfplut) env->ThrowError("TNLMeans:  malloc failure (pfplut)!");
   PlanarFrame* srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
-  const int startz = Azi - min(n, Azi);
-  const int stopz = Azi + min(vi.num_frames - n - 1, Azi);
+  const int startz = Azi - std::min(n, Azi);
+  const int stopz = Azi + std::min(vi.num_frames - n - 1, Azi);
   for (int b = 0; b < 3; ++b)
   {
-    const unsigned char* srcp = srcPF->GetPtr(b);
-    const unsigned char* pf2p = srcPF->GetPtr(b);
+    const uint8_t* srcp = srcPF->GetPtr(b);
+    const uint8_t* pf2p = srcPF->GetPtr(b);
     const int pitch = srcPF->GetPitch(b);
     const int height = srcPF->GetHeight(b);
     const int heightm1 = height - 1;
@@ -811,37 +838,37 @@ void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, 
     memset(dds->wmaxs, 0, height * width * sizeof(double));
     for (int y = Byi; y < height + Byi; y += Bydi)
     {
-      const int starty = max(y - Ayi, Byi);
-      const int stopy = min(y + Ayi, heightm1 - min(Byi, heightm1 - y));
+      const int starty = std::max(y - Ayi, Byi);
+      const int stopy = std::min(y + Ayi, heightm1 - std::min(Byi, heightm1 - y));
       const int doffy = (y - Byi) * width;
       for (int x = Bxi; x < width + Bxi; x += Bxdi)
       {
-        const int startx = max(x - Axi, Bxi);
-        const int stopx = min(x + Axi, widthm1 - min(Bxi, widthm1 - x));
+        const int startx = std::max(x - Axi, Bxi);
+        const int stopx = std::min(x + Axi, widthm1 - std::min(Bxi, widthm1 - x));
         const int doff = doffy + x;
         double* dsum_saved = dds->sums + doff;
         double* dweight_saved = dds->weights + doff;
         double* dwmax_saved = dds->wmaxs + doff;
         for (int z = startz; z <= stopz; ++z)
         {
-          const unsigned char* pf1p = pfplut[z];
+          const uint8_t* pf1p = pfplut[z];
           for (int u = starty; u <= stopy; ++u)
           {
-            const int yT = -min(min(Syi, u), y);
-            const int yB = min(min(Syi, heightm1 - u), heightm1 - y);
-            const int yBb = min(min(Byi, heightm1 - u), heightm1 - y);
-            const unsigned char* s1_saved = pf1p + (u + yT) * pitch;
-            const unsigned char* s2_saved = pf2p + (y + yT) * pitch + x;
-            const unsigned char* sbp_saved = pf1p + (u - Byi) * pitch;
+            const int yT = -std::min(std::min(Syi, u), y);
+            const int yB = std::min(std::min(Syi, heightm1 - u), heightm1 - y);
+            const int yBb = std::min(std::min(Byi, heightm1 - u), heightm1 - y);
+            const uint8_t* s1_saved = pf1p + (u + yT) * pitch;
+            const uint8_t* s2_saved = pf2p + (y + yT) * pitch + x;
+            const uint8_t* sbp_saved = pf1p + (u - Byi) * pitch;
             const double* gwi_saved = gwi + (yT + Syi) * Sxdi + Sxi;
             const int pf1pl = u * pitch;
             for (int v = startx; v <= stopx; ++v)
             {
               if (z == Azi && u == y && v == x) continue;
-              const int xL = -min(min(Sxi, v), x);
-              const int xR = min(min(Sxi, widthm1 - v), widthm1 - x);
-              const unsigned char* s1 = s1_saved + v;
-              const unsigned char* s2 = s2_saved;
+              const int xL = -std::min(std::min(Sxi, v), x);
+              const int xR = std::min(std::min(Sxi, widthm1 - v), widthm1 - x);
+              const uint8_t* s1 = s1_saved + v;
+              const uint8_t* s2 = s2_saved;
               const double* gwiT = gwi_saved;
               double diff = 0.0, gweights = 0.0;
               for (int j = yT; j <= yB; ++j)
@@ -856,8 +883,8 @@ void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, 
                 gwiT += Sxdi;
               }
               const double weight = exp((diff / gweights) * h2in);
-              const int xRb = min(min(Bxi, widthm1 - v), widthm1 - x);
-              const unsigned char* sbp = sbp_saved + v;
+              const int xRb = std::min(std::min(Bxi, widthm1 - v), widthm1 - x);
+              const uint8_t* sbp = sbp_saved + v;
               double* dsum = dsum_saved;
               double* dweight = dweight_saved;
               double* dwmax = dwmax_saved;
@@ -897,21 +924,28 @@ void TNLMeans::MSWZB_SAD(nlCache* fci, const int Axi, const int Ayi, const int A
     nlFrame* nl = fci->frames[fci->getCachePos(i - n + Azi)];
     if (nl->fnum != i)
     {
-      nl->pf->copyFrom(hc ? hclip->GetFrame(mapn(i), env) : child->GetFrame(mapn(i), env),
-        hc ? (VideoInfo)hclip->GetVideoInfo() : vi);
+      if (hc) {
+        PVideoFrame src_h = hclip->GetFrame(mapn(i), env);
+        VideoInfo vi_h = hclip->GetVideoInfo();
+        nl->pf->copyFrom(src_h, vi_h);
+      }
+      else {
+        PVideoFrame src = child->GetFrame(mapn(i), env);
+        nl->pf->copyFrom(src, vi);
+      }
       nl->setFNum(i);
     }
   }
-  const unsigned char** pfplut =
-    (const unsigned char**)_aligned_malloc(fci->size * sizeof(const unsigned char*), 16);
+  const uint8_t** pfplut =
+    (const uint8_t**)_aligned_malloc(fci->size * sizeof(const uint8_t*), 16);
   if (!pfplut) env->ThrowError("TNLMeans:  malloc failure (pfplut)!");
   PlanarFrame* srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
-  const int startz = Azi - min(n, Azi);
-  const int stopz = Azi + min(vi.num_frames - n - 1, Azi);
+  const int startz = Azi - std::min(n, Azi);
+  const int stopz = Azi + std::min(vi.num_frames - n - 1, Azi);
   for (int b = 0; b < 3; ++b)
   {
-    const unsigned char* srcp = srcPF->GetPtr(b);
-    const unsigned char* pf2p = srcPF->GetPtr(b);
+    const uint8_t* srcp = srcPF->GetPtr(b);
+    const uint8_t* pf2p = srcPF->GetPtr(b);
     const int pitch = srcPF->GetPitch(b);
     const int height = srcPF->GetHeight(b);
     const int heightm1 = height - 1;
@@ -925,37 +959,37 @@ void TNLMeans::MSWZB_SAD(nlCache* fci, const int Axi, const int Ayi, const int A
     memset(dds->wmaxs, 0, height * width * sizeof(double));
     for (int y = Byi; y < height + Byi; y += Bydi)
     {
-      const int starty = max(y - Ayi, Byi);
-      const int stopy = min(y + Ayi, heightm1 - min(Byi, heightm1 - y));
+      const int starty = std::max(y - Ayi, Byi);
+      const int stopy = std::min(y + Ayi, heightm1 - std::min(Byi, heightm1 - y));
       const int doffy = (y - Byi) * width;
       for (int x = Bxi; x < width + Bxi; x += Bxdi)
       {
-        const int startx = max(x - Axi, Bxi);
-        const int stopx = min(x + Axi, widthm1 - min(Bxi, widthm1 - x));
+        const int startx = std::max(x - Axi, Bxi);
+        const int stopx = std::min(x + Axi, widthm1 - std::min(Bxi, widthm1 - x));
         const int doff = doffy + x;
         double* dsum_saved = dds->sums + doff;
         double* dweight_saved = dds->weights + doff;
         double* dwmax_saved = dds->wmaxs + doff;
         for (int z = startz; z <= stopz; ++z)
         {
-          const unsigned char* pf1p = pfplut[z];
+          const uint8_t* pf1p = pfplut[z];
           for (int u = starty; u <= stopy; ++u)
           {
-            const int yT = -min(min(Syi, u), y);
-            const int yB = min(min(Syi, heightm1 - u), heightm1 - y);
-            const int yBb = min(min(Byi, heightm1 - u), heightm1 - y);
-            const unsigned char* s1_saved = pf1p + (u + yT) * pitch;
-            const unsigned char* s2_saved = pf2p + (y + yT) * pitch + x;
-            const unsigned char* sbp_saved = pf1p + (u - Byi) * pitch;
+            const int yT = -std::min(std::min(Syi, u), y);
+            const int yB = std::min(std::min(Syi, heightm1 - u), heightm1 - y);
+            const int yBb = std::min(std::min(Byi, heightm1 - u), heightm1 - y);
+            const uint8_t* s1_saved = pf1p + (u + yT) * pitch;
+            const uint8_t* s2_saved = pf2p + (y + yT) * pitch + x;
+            const uint8_t* sbp_saved = pf1p + (u - Byi) * pitch;
             const double* gwi_saved = gwi + (yT + Syi) * Sxdi + Sxi;
             const int pf1pl = u * pitch;
             for (int v = startx; v <= stopx; ++v)
             {
               if (z == Azi && u == y && v == x) continue;
-              const int xL = -min(min(Sxi, v), x);
-              const int xR = min(min(Sxi, widthm1 - v), widthm1 - x);
-              const unsigned char* s1 = s1_saved + v;
-              const unsigned char* s2 = s2_saved;
+              const int xL = -std::min(std::min(Sxi, v), x);
+              const int xR = std::min(std::min(Sxi, widthm1 - v), widthm1 - x);
+              const uint8_t* s1 = s1_saved + v;
+              const uint8_t* s2 = s2_saved;
               const double* gwiT = gwi_saved;
               double diff = 0.0, gweights = 0.0;
               for (int j = yT; j <= yB; ++j)
@@ -970,8 +1004,8 @@ void TNLMeans::MSWZB_SAD(nlCache* fci, const int Axi, const int Ayi, const int A
                 gwiT += Sxdi;
               }
               const double weight = exp((diff / gweights) * hin);
-              const int xRb = min(min(Bxi, widthm1 - v), widthm1 - x);
-              const unsigned char* sbp = sbp_saved + v;
+              const int xRb = std::min(std::min(Bxi, widthm1 - v), widthm1 - x);
+              const uint8_t* sbp = sbp_saved + v;
               double* dsum = dsum_saved;
               double* dweight = dweight_saved;
               double* dwmax = dwmax_saved;
