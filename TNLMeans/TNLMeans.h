@@ -80,34 +80,39 @@ private:
   nlFrame* nlfs, * nlhs;
   PClip hclip;
   int mapn(int n);
-  PVideoFrame __stdcall GetFrameWZ(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall GetFrameWZB(int n, IScriptEnvironment* env);
+
+  template<bool SAD>
   PVideoFrame __stdcall GetFrameWOZ(int n, IScriptEnvironment* env);
+
+  template<bool SAD>
+  PVideoFrame __stdcall GetFrameWZ(int n, IScriptEnvironment* env);
+
+  template<bool SAD>
+  PVideoFrame __stdcall GetFrameWZB(int n, IScriptEnvironment* env);
+
+  template<bool SAD>
   PVideoFrame __stdcall GetFrameWOZB(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall GetFrameWZ_SAD(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall GetFrameWZB_SAD(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall GetFrameWOZ_SAD(int n, IScriptEnvironment* env);
-  PVideoFrame __stdcall GetFrameWOZB_SAD(int n, IScriptEnvironment* env);
+
   PVideoFrame __stdcall GetFrameNT_MS(int n, IScriptEnvironment* env);
   PVideoFrame __stdcall GetFrameT_MS(int n, IScriptEnvironment* env);
+
+  template<bool SAD>
   void MSWOZ(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     const int Syi, const double* gwi);
+
+  template<bool SAD>
   void MSWOZB(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     const int Syi, const int Bxi, const int Byi, const double* gwi);
+
+  template<bool SAD>
   void MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
     const int Syi, const double* gwi, int n, bool hc, IScriptEnvironment* env);
+
+  template<bool SAD>
   void MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
     const int Syi, const int Bxi, const int Byi, const double* gwi, int n, bool hc,
     IScriptEnvironment* env);
-  void MSWOZ_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
-    const int Syi, const double* gwi);
-  void MSWOZB_SAD(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
-    const int Syi, const int Bxi, const int Byi, const double* gwi);
-  void MSWZ_SAD(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
-    const int Syi, const double* gwi, int n, bool hc, IScriptEnvironment* env);
-  void MSWZB_SAD(nlCache* fci, const int Axi, const int Ayi, const int Azi, const int Sxi,
-    const int Syi, const int Bxi, const int Byi, const double* gwi, int n, bool hc,
-    IScriptEnvironment* env);
+
   void combineMSWeights(PlanarFrame* dst, nlFrame* fs, nlFrame* hs);
 
 public:
