@@ -36,10 +36,7 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
   int cpuFlags = env->GetCPUFlags();
   fc = fcfs = fchs = nullptr;
   dstPF = srcPFr = nullptr;
-  gw = gwh = nullptr;
-  weightsb = sumsb = nullptr;
   nlfs = nlhs = nullptr;
-  ds = nullptr;
   if (vi.IsRGB() || vi.IsY() || vi.BitsPerComponent() > 8)
     env->ThrowError("TNLMeans:  only yuy2 and 8 bit planar YUV input are supported!");
   if (h <= 0.0)
@@ -98,8 +95,7 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
     const int Sydh = Syh * 2 + 1;
     const int Bxh = (Bx + 1) >> 1;
     const int Byh = (By + 1) >> 1;
-    gwh = (double*)_aligned_malloc(Sxdh * Sydh * sizeof(double), 16);
-    if (!gwh) env->ThrowError("TNLMeans:  malloc failure (gwh)!");
+    gwh.resize(Sxdh * Sydh);
     int w = 0, m, n;
     for (int j = -Syh; j <= Syh; ++j)
     {
@@ -119,23 +115,17 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
     else srcPFr = new PlanarFrame(vi, cpuFlags);
     if (Bx || By)
     {
-      sumsb = (double*)_aligned_malloc(Bxa * sizeof(double), 16);
-      if (!sumsb) env->ThrowError("TNLMeans:  malloc failure (sumsb)!");
-      weightsb = (double*)_aligned_malloc(Bxa * sizeof(double), 16);
-      if (!weightsb) env->ThrowError("TNLMeans:  malloc failure (weightsb)!");
+      sumsb.resize(Bxa);
+      weightsb.resize(Bxa);
     }
     else if (Az == 0)
     {
-      ds = new SDATA();
-      ds->sums = (double*)_aligned_malloc(vi.width * vi.height * sizeof(double), 16);
-      ds->weights = (double*)_aligned_malloc(vi.width * vi.height * sizeof(double), 16);
-      ds->wmaxs = (double*)_aligned_malloc(vi.width * vi.height * sizeof(double), 16);
-      if (!ds || !ds->sums || !ds->weights || !ds->wmaxs)
-        env->ThrowError("TNLMeans:  malloc failure (ds)!");
+      ds.sums.resize(vi.width * vi.height);
+      ds.weights.resize(vi.width * vi.height);
+      ds.wmaxs.resize(vi.width * vi.height);
     }
   }
-  gw = (double*)_aligned_malloc(Sxd * Syd * sizeof(double), 16);
-  if (!gw) env->ThrowError("TNLMeans:  malloc failure (gw)!");
+  gw.resize(Sxd * Syd);
   int w = 0, m, n;
   for (int j = -Sy; j <= Sy; ++j)
   {
@@ -157,19 +147,8 @@ TNLMeans::~TNLMeans()
   if (fchs) delete fchs;
   if (dstPF) delete dstPF;
   if (srcPFr) delete srcPFr;
-  if (gw) _aligned_free(gw);
-  if (gwh) _aligned_free(gwh);
-  if (sumsb) _aligned_free(sumsb);
-  if (weightsb) _aligned_free(weightsb);
   if (nlfs) delete nlfs;
   if (nlhs) delete nlhs;
-  if (ds)
-  {
-    _aligned_free(ds->sums);
-    _aligned_free(ds->weights);
-    _aligned_free(ds->wmaxs);
-    delete ds;
-  }
 }
 
 PVideoFrame __stdcall TNLMeans::GetFrame(int n, IScriptEnvironment* env)
@@ -212,17 +191,11 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env)
       fc->clearDS(nl);
     }
   }
-  const uint8_t** pfplut =
-    (const uint8_t**)_aligned_malloc(fc->size * sizeof(const uint8_t*), 16);
-  if (!pfplut) env->ThrowError("TNLMeans:  malloc failure (pfplut)!");
-  const SDATA** dslut =
-    (const SDATA**)_aligned_malloc(fc->size * sizeof(SDATA*), 16);
-  if (!dslut) env->ThrowError("TNLMeans:  malloc failure (dslut)!");
-  int** dsalut =
-    (int**)_aligned_malloc(fc->size * sizeof(int*), 16);
-  if (!dsalut) env->ThrowError("TNLMeans:  malloc failure (dsalut)!");
+  std::vector<const uint8_t*> pfplut(fc->size);
+  std::vector<const SDATA*> dslut(fc->size);
+  std::vector<int*> dsalut(fc->size);
   for (int i = 0; i < fc->size; ++i)
-    dsalut[i] = fc->frames[fc->getCachePos(i)]->dsa;
+    dsalut[i] = fc->frames[fc->getCachePos(i)]->dsa.data();
   int* ddsa = dsalut[Az];
   PlanarFrame* srcPF = fc->frames[fc->getCachePos(Az)]->pf;
   const int startz = Az - std::min(n, Az);
@@ -241,7 +214,7 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env)
     {
       const int pos = fc->getCachePos(i);
       pfplut[i] = fc->frames[pos]->pf->GetPtr(b);
-      dslut[i] = fc->frames[pos]->ds[b];
+      dslut[i] = &fc->frames[pos]->ds[b];
     }
     const SDATA* dds = dslut[Az];
     for (int y = 0; y < height; ++y)
@@ -254,9 +227,9 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env)
         const int startxt = std::max(x - Ax, 0);
         const int stopx = std::min(x + Ax, widthm1);
         const int doff = doffy + x;
-        double* dsum = &dds->sums[doff];
-        double* dweight = &dds->weights[doff];
-        double* dwmax = &dds->wmaxs[doff];
+        double* dsum = const_cast<double *>(&dds->sums[doff]);
+        double* dweight = const_cast<double*>(&dds->weights[doff]);
+        double* dwmax = const_cast<double*>(&dds->wmaxs[doff]);
         for (int z = startz; z <= stopz; ++z)
         {
           if (ddsa[z] == 1) continue;
@@ -272,15 +245,15 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env)
             const int yB = std::min(std::min(Sy, heightm1 - u), heightm1 - y);
             const uint8_t* s1_saved = pf1p + (u + yT) * pitch;
             const uint8_t* s2_saved = pf2p + (y + yT) * pitch + x;
-            const double* gw_saved = gw + (yT + Sy) * Sxd + Sx;
+            const double* gw_saved = gw.data() + (yT + Sy) * Sxd + Sx;
             const int pf1pl = u * pitch;
             const int coffy = u * width;
             for (int v = startx; v <= stopx; ++v)
             {
               const int coff = coffy + v;
-              double* csum = &cds->sums[coff];
-              double* cweight = &cds->weights[coff];
-              double* cwmax = &cds->wmaxs[coff];
+              double* csum = const_cast<double*>(&cds->sums[coff]);
+              double* cweight = const_cast<double*>(&cds->weights[coff]);
+              double* cwmax = const_cast<double*>(&cds->wmaxs[coff]);
               const int xL = -std::min(std::min(Sx, v), x);
               const int xR = std::min(std::min(Sx, widthm1 - v), widthm1 - x);
               const uint8_t* s1 = s1_saved + v;
@@ -330,12 +303,9 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env)
   int j = fc->size - 1;
   for (int i = 0; i < fc->size; ++i, --j)
   {
-    int* cdsa = fc->frames[fc->getCachePos(i)]->dsa;
+    int* cdsa = fc->frames[fc->getCachePos(i)]->dsa.data();
     if (ddsa[i] == 2) ddsa[i] = cdsa[j] = 1;
   }
-  _aligned_free(dsalut);
-  _aligned_free(dslut);
-  _aligned_free(pfplut);
   PVideoFrame dst = env->NewVideoFrame(vi);
   dstPF->copyTo(dst, vi);
   return dst;
@@ -356,9 +326,7 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
       nl->setFNum(i);
     }
   }
-  const uint8_t** pfplut =
-    (const uint8_t**)_aligned_malloc(fc->size * sizeof(const uint8_t*), 16);
-  if (!pfplut) env->ThrowError("TNLMeans:  malloc failure (pfplut)!");
+  std::vector<const uint8_t*> pfplut(fc->size);
   PlanarFrame* srcPF = fc->frames[fc->getCachePos(Az)]->pf;
   const int startz = Az - std::min(n, Az);
   const int stopz = Az + std::min(vi.num_frames - n - 1, Az);
@@ -372,8 +340,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
     const int heightm1 = height - 1;
     const int width = dstPF->GetWidth(b);
     const int widthm1 = width - 1;
-    double* sumsb_saved = sumsb + Bx;
-    double* weightsb_saved = weightsb + Bx;
+    double* sumsb_saved = sumsb.data() + Bx;
+    double* weightsb_saved = weightsb.data() + Bx;
     for (int i = 0; i < fc->size; ++i)
       pfplut[i] = fc->frames[fc->getCachePos(i)]->pf->GetPtr(b);
     for (int y = By; y < height + By; y += Byd)
@@ -383,8 +351,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
       const int yTr = std::min(Byd, height - y + By);
       for (int x = Bx; x < width + Bx; x += Bxd)
       {
-        memset(sumsb, 0, Bxa * sizeof(double));
-        memset(weightsb, 0, Bxa * sizeof(double));
+        std::fill(sumsb.begin(), sumsb.end(), 0.0);
+        std::fill(weightsb.begin(), weightsb.end(), 0.0);
         double wmax = 0.0;
         const int startx = std::max(x - Ax, Bx);
         const int stopx = std::min(x + Ax, widthm1 - std::min(Bx, widthm1 - x));
@@ -400,7 +368,7 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
             const uint8_t* s1_saved = pf1p + (u + yT) * pitch;
             const uint8_t* s2_saved = pf2p + (y + yT) * pitch + x;
             const uint8_t* sbp_saved = pf1p + (u - By) * pitch;
-            const double* gw_saved = gw + (yT + Sy) * Sxd + Sx;
+            const double* gw_saved = gw.data() + (yT + Sy) * Sxd + Sx;
             const int pf1pl = u * pitch;
             for (int v = startx; v <= stopx; ++v)
             {
@@ -451,8 +419,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
         }
         const uint8_t* srcpT = srcp + x - Bx;
         uint8_t* dstpT = dstp + x - Bx;
-        double* sumsbTr = sumsb;
-        double* weightsbTr = weightsb;
+        double* sumsbTr = sumsb.data();
+        double* weightsbTr = weightsb.data();
         if (wmax <= DBL_EPSILON) wmax = 1.0;
         for (int j = 0; j < yTr; ++j)
         {
@@ -472,7 +440,6 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
       srcp += pitch * Byd;
     }
   }
-  _aligned_free(pfplut);
   PVideoFrame dst = env->NewVideoFrame(vi);
   dstPF->copyTo(dst, vi);
   return dst;
@@ -493,9 +460,9 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZ(int n, IScriptEnvironment* env)
     const int heightm1 = height - 1;
     const int width = dstPF->GetWidth(b);
     const int widthm1 = width - 1;
-    memset(ds->sums, 0, height * width * sizeof(double));
-    memset(ds->weights, 0, height * width * sizeof(double));
-    memset(ds->wmaxs, 0, height * width * sizeof(double));
+    std::fill(ds.sums.begin(), ds.sums.end(), 0.0);
+    std::fill(ds.weights.begin(), ds.weights.end(), 0.0);
+    std::fill(ds.wmaxs.begin(), ds.wmaxs.end(), 0.0);
     for (int y = 0; y < height; ++y)
     {
       const int stopy = std::min(y + Ay, heightm1);
@@ -505,9 +472,9 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZ(int n, IScriptEnvironment* env)
         const int startxt = std::max(x - Ax, 0);
         const int stopx = std::min(x + Ax, widthm1);
         const int doff = doffy + x;
-        double* dsum = &ds->sums[doff];
-        double* dweight = &ds->weights[doff];
-        double* dwmax = &ds->wmaxs[doff];
+        double* dsum = &ds.sums[doff];
+        double* dweight = &ds.weights[doff];
+        double* dwmax = &ds.wmaxs[doff];
         for (int u = y; u <= stopy; ++u)
         {
           const int startx = u == y ? x + 1 : startxt;
@@ -515,15 +482,15 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZ(int n, IScriptEnvironment* env)
           const int yB = std::min(std::min(Sy, heightm1 - u), heightm1 - y);
           const uint8_t* s1_saved = pfp + (u + yT) * pitch;
           const uint8_t* s2_saved = pfp + (y + yT) * pitch + x;
-          const double* gw_saved = gw + (yT + Sy) * Sxd + Sx;
+          const double* gw_saved = gw.data() + (yT + Sy) * Sxd + Sx;
           const int pfpl = u * pitch;
           const int coffy = u * width;
           for (int v = startx; v <= stopx; ++v)
           {
             const int coff = coffy + v;
-            double* csum = &ds->sums[coff];
-            double* cweight = &ds->weights[coff];
-            double* cwmax = &ds->wmaxs[coff];
+            double* csum = &ds.sums[coff];
+            double* cweight = &ds.weights[coff];
+            double* cwmax = &ds.wmaxs[coff];
             const int xL = -std::min(std::min(Sx, v), x);
             const int xR = std::min(std::min(Sx, widthm1 - v), widthm1 - x);
             const uint8_t* s1 = s1_saved + v;
@@ -586,8 +553,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZB(int n, IScriptEnvironment* env)
     const int heightm1 = height - 1;
     const int width = dstPF->GetWidth(b);
     const int widthm1 = width - 1;
-    double* sumsb_saved = sumsb + Bx;
-    double* weightsb_saved = weightsb + Bx;
+    double* sumsb_saved = sumsb.data() + Bx;
+    double* weightsb_saved = weightsb.data() + Bx;
     for (int y = By; y < height + By; y += Byd)
     {
       const int starty = std::max(y - Ay, By);
@@ -595,8 +562,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZB(int n, IScriptEnvironment* env)
       const int yTr = std::min(Byd, height - y + By);
       for (int x = Bx; x < width + Bx; x += Bxd)
       {
-        memset(sumsb, 0, Bxa * sizeof(double));
-        memset(weightsb, 0, Bxa * sizeof(double));
+        std::fill(sumsb.begin(), sumsb.end(), 0.0);
+        std::fill(weightsb.begin(), weightsb.end(), 0.0);
         double wmax = 0.0;
         const int startx = std::max(x - Ax, Bx);
         const int stopx = std::min(x + Ax, widthm1 - std::min(Bx, widthm1 - x));
@@ -609,7 +576,7 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZB(int n, IScriptEnvironment* env)
           const uint8_t* s1_saved = pfp + (u + yT) * pitch;
           const uint8_t* s2_saved = pfp + (y + yT) * pitch + x;
           const uint8_t* sbp_saved = pfp + (u - By) * pitch;
-          const double* gw_saved = gw + (yT + Sy) * Sxd + Sx;
+          const double* gw_saved = gw.data() + (yT + Sy) * Sxd + Sx;
           for (int v = startx; v <= stopx; ++v)
           {
             if (u == y && v == x) continue;
@@ -658,8 +625,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZB(int n, IScriptEnvironment* env)
         }
         const uint8_t* srcpT = srcp + x - Bx;
         uint8_t* dstpT = dstp + x - Bx;
-        double* sumsbTr = sumsb;
-        double* weightsbTr = weightsb;
+        double* sumsbTr = sumsb.data();
+        double* weightsbTr = weightsb.data();
         if (wmax <= DBL_EPSILON) wmax = 1.0;
         for (int j = 0; j < yTr; ++j)
         {
@@ -695,46 +662,28 @@ nlFrame::nlFrame()
 {
   fnum = -20;
   pf = nullptr;
-  ds = nullptr;
-  dsa = nullptr;
 }
 
 nlFrame::nlFrame(bool _useblocks, int _size, VideoInfo& vi, int cpuFlags)
 {
   fnum = -20;
   pf = new PlanarFrame(vi, cpuFlags);
-  ds = nullptr;
-  dsa = nullptr;
   if (!_useblocks)
   {
-    ds = (SDATA**)malloc(3 * sizeof(SDATA*));
+    ds.resize(3); // three planes
     for (int i = 0; i < 3; ++i)
     {
-      ds[i] = new SDATA();
-      ds[i]->sums = (double*)_aligned_malloc(pf->GetHeight(i) * pf->GetWidth(i) * sizeof(double), 16);
-      ds[i]->weights = (double*)_aligned_malloc(pf->GetHeight(i) * pf->GetWidth(i) * sizeof(double), 16);
-      ds[i]->wmaxs = (double*)_aligned_malloc(pf->GetHeight(i) * pf->GetWidth(i) * sizeof(double), 16);
+      ds[i].sums.resize(pf->GetHeight(i) * pf->GetWidth(i));
+      ds[i].weights.resize(pf->GetHeight(i) * pf->GetWidth(i));
+      ds[i].wmaxs.resize(pf->GetHeight(i) * pf->GetWidth(i));
     }
-    dsa = (int*)malloc(_size * sizeof(int));
-    for (int i = 0; i < _size; ++i) dsa[i] = 0;
+    dsa.resize(_size, 0); // init with zero
   }
 }
 
 nlFrame::~nlFrame()
 {
   if (pf) delete pf;
-  if (ds)
-  {
-    for (int i = 0; i < 3; ++i)
-    {
-      _aligned_free(ds[i]->sums);
-      _aligned_free(ds[i]->weights);
-      _aligned_free(ds[i]->wmaxs);
-      delete ds[i];
-    }
-    free(ds);
-  }
-  if (dsa) free(dsa);
 }
 
 void nlFrame::setFNum(int i)
@@ -789,9 +738,9 @@ void nlCache::clearDS(nlFrame* nl)
 {
   for (int i = 0; i < 3; ++i)
   {
-    memset(nl->ds[i]->sums, 0, nl->pf->GetHeight(i) * nl->pf->GetWidth(i) * sizeof(double));
-    memset(nl->ds[i]->weights, 0, nl->pf->GetHeight(i) * nl->pf->GetWidth(i) * sizeof(double));
-    memset(nl->ds[i]->wmaxs, 0, nl->pf->GetHeight(i) * nl->pf->GetWidth(i) * sizeof(double));
+    std::fill(nl->ds[i].sums.begin(), nl->ds[i].sums.end(), 0.0);
+    std::fill(nl->ds[i].weights.begin(), nl->ds[i].weights.end(), 0.0);
+    std::fill(nl->ds[i].wmaxs.begin(), nl->ds[i].wmaxs.end(), 0.0);
   }
   for (int i = 0; i < size; ++i) nl->dsa[i] = 0;
 }

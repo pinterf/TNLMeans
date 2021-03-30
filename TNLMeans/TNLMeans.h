@@ -31,9 +31,9 @@
 
 struct SDATA
 {
-  double* weights;
-  double* sums;
-  double* wmaxs;
+  std::vector<double> weights;
+  std::vector<double> sums;
+  std::vector<double> wmaxs;
 };
 
 class nlFrame
@@ -41,8 +41,8 @@ class nlFrame
 public:
   int fnum;
   PlanarFrame* pf;
-  SDATA** ds;
-  int* dsa;
+  std::vector<SDATA> ds;
+  std::vector<int> dsa;
   nlFrame();
   nlFrame(bool _useblocks, int _size, VideoInfo& vi, int cpuFlags);
   ~nlFrame();
@@ -71,11 +71,14 @@ private:
   int Sxd, Syd, Sxa;
   int Bxd, Byd, Bxa;
   int Axd, Ayd, Axa, Azdm1;
-  double a, a2, h, hin, h2in, * gw;
-  double* sumsb, * weightsb, * gwh;
+  double a, a2, h, hin, h2in;
+  std::vector<double> gw;
+  std::vector<double> sumsb;
+  std::vector<double> weightsb;
+  std::vector<double> gwh;
   bool ms, sse;
   nlCache* fc, * fcfs, * fchs;
-  SDATA* ds;
+  SDATA ds;
   PlanarFrame* dstPF, * srcPFr;
   nlFrame* nlfs, * nlhs;
   PClip hclip;

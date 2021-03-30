@@ -38,26 +38,26 @@ PVideoFrame __stdcall TNLMeans::GetFrameNT_MS(int n, IScriptEnvironment* env)
   {
     if (sse)
     {
-      MSWOZB<false>(nlfs, 2, 2, Sx, Sy, Bx, By, gw);
-      MSWOZB<false>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh);
+      MSWOZB<false>(nlfs, 2, 2, Sx, Sy, Bx, By, gw.data());
+      MSWOZB<false>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data());
     }
     else
     {
-      MSWOZB<true>(nlfs, 2, 2, Sx, Sy, Bx, By, gw);
-      MSWOZB<true>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh);
+      MSWOZB<true>(nlfs, 2, 2, Sx, Sy, Bx, By, gw.data());
+      MSWOZB<true>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data());
     }
   }
   else
   {
     if (sse)
     {
-      MSWOZ<false>(nlfs, 2, 2, Sx, Sy, gw);
-      MSWOZ<false>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh);
+      MSWOZ<false>(nlfs, 2, 2, Sx, Sy, gw.data());
+      MSWOZ<false>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data());
     }
     else
     {
-      MSWOZ<true>(nlfs, 2, 2, Sx, Sy, gw);
-      MSWOZ<true>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh);
+      MSWOZ<true>(nlfs, 2, 2, Sx, Sy, gw.data());
+      MSWOZ<true>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data());
     }
   }
   combineMSWeights(dstPF, nlfs, nlhs);
@@ -72,26 +72,26 @@ PVideoFrame __stdcall TNLMeans::GetFrameT_MS(int n, IScriptEnvironment* env)
   {
     if (sse)
     {
-      MSWZB<false>(fcfs, 2, 2, Az, Sx, Sy, Bx, By, gw, n, false, env);
-      MSWZB<false>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh, n, true, env);
+      MSWZB<false>(fcfs, 2, 2, Az, Sx, Sy, Bx, By, gw.data(), n, false, env);
+      MSWZB<false>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data(), n, true, env);
     }
     else
     {
-      MSWZB<true>(fcfs, 2, 2, Az, Sx, Sy, Bx, By, gw, n, false, env);
-      MSWZB<true>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh, n, true, env);
+      MSWZB<true>(fcfs, 2, 2, Az, Sx, Sy, Bx, By, gw.data(), n, false, env);
+      MSWZB<true>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data(), n, true, env);
     }
   }
   else
   {
     if (sse)
     {
-      MSWZ<false>(fcfs, 2, 2, Az, Sx, Sy, gw, n, false, env);
-      MSWZ<false>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh, n, true, env);
+      MSWZ<false>(fcfs, 2, 2, Az, Sx, Sy, gw.data(), n, false, env);
+      MSWZ<false>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data(), n, true, env);
     }
     else
     {
-      MSWZ<true>(fcfs, 2, 2, Az, Sx, Sy, gw, n, false, env);
-      MSWZ<true>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh, n, true, env);
+      MSWZ<true>(fcfs, 2, 2, Az, Sx, Sy, gw.data(), n, false, env);
+      MSWZ<true>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data(), n, true, env);
     }
   }
   combineMSWeights(dstPF, fcfs->frames[fcfs->getCachePos(Az)], fchs->frames[fchs->getCachePos(Az)]);
@@ -114,12 +114,12 @@ void TNLMeans::combineMSWeights(PlanarFrame* dst, nlFrame* fs, nlFrame* hs)
     const uint8_t* srcpn = srcp + src_pitch;
     const uint8_t* srcph = hs->pf->GetPtr(b);
     const int srch_pitch = hs->pf->GetPitch(b);
-    const double* hsw = hs->ds[b]->weights;
-    const double* hss = hs->ds[b]->sums;
-    const double* hswm = hs->ds[b]->wmaxs;
-    double* fsw = fs->ds[b]->weights;
-    double* fss = fs->ds[b]->sums;
-    double* fswm = fs->ds[b]->wmaxs;
+    const double* hsw = hs->ds[b].weights.data();
+    const double* hss = hs->ds[b].sums.data();
+    const double* hswm = hs->ds[b].wmaxs.data();
+    double* fsw = fs->ds[b].weights.data();
+    double* fss = fs->ds[b].sums.data();
+    double* fswm = fs->ds[b].wmaxs.data();
     double* fswn = fsw + width;
     double* fssn = fss + width;
     double* fswmn = fswm + width;
@@ -197,10 +197,10 @@ void TNLMeans::MSWOZ(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     const int heightm1 = height - 1;
     const int width = srcPF->GetWidth(b);
     const int widthm1 = width - 1;
-    SDATA* dds = nl->ds[b];
-    memset(dds->sums, 0, height * width * sizeof(double));
-    memset(dds->weights, 0, height * width * sizeof(double));
-    memset(dds->wmaxs, 0, height * width * sizeof(double));
+    SDATA* dds = &nl->ds[b];
+    std::fill(dds->sums.begin(), dds->sums.end(), 0.0);
+    std::fill(dds->weights.begin(), dds->weights.end(), 0.0);
+    std::fill(dds->wmaxs.begin(), dds->wmaxs.end(), 0.0);
     for (int y = 0; y < height; ++y)
     {
       const int stopy = std::min(y + Ayi, heightm1);
@@ -285,10 +285,10 @@ void TNLMeans::MSWOZB(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
     const int heightm1 = height - 1;
     const int width = srcPF->GetWidth(b);
     const int widthm1 = width - 1;
-    SDATA* dds = nl->ds[b];
-    memset(dds->sums, 0, height * width * sizeof(double));
-    memset(dds->weights, 0, height * width * sizeof(double));
-    memset(dds->wmaxs, 0, height * width * sizeof(double));
+    SDATA *dds = &nl->ds[b];
+    std::fill(dds->sums.begin(), dds->sums.end(), 0.0);
+    std::fill(dds->weights.begin(), dds->weights.end(), 0.0);
+    std::fill(dds->wmaxs.begin(), dds->wmaxs.end(), 0.0);
     for (int y = Byi; y < height + Byi; y += Bydi)
     {
       const int starty = std::max(y - Ayi, Byi);
@@ -299,9 +299,9 @@ void TNLMeans::MSWOZB(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
         const int startx = std::max(x - Axi, Bxi);
         const int stopx = std::min(x + Axi, widthm1 - std::min(Bxi, widthm1 - x));
         const int doff = doffy + x;
-        double* dsum_saved = dds->sums + doff;
-        double* dweight_saved = dds->weights + doff;
-        double* dwmax_saved = dds->wmaxs + doff;
+        double* dsum_saved = dds->sums.data() + doff;
+        double* dweight_saved = dds->weights.data() + doff;
+        double* dwmax_saved = dds->wmaxs.data() + doff;
         for (int u = starty; u <= stopy; ++u)
         {
           const int yT = -std::min(std::min(Syi, u), y);
@@ -390,17 +390,11 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
       fci->clearDS(nl);
     }
   }
-  const uint8_t** pfplut =
-    (const uint8_t**)_aligned_malloc(fci->size * sizeof(const uint8_t*), 16);
-  if (!pfplut) env->ThrowError("TNLMeans:  malloc failure (pfplut)!");
-  const SDATA** dslut =
-    (const SDATA**)_aligned_malloc(fci->size * sizeof(SDATA*), 16);
-  if (!dslut) env->ThrowError("TNLMeans:  malloc failure (dslut)!");
-  int** dsalut =
-    (int**)_aligned_malloc(fci->size * sizeof(int*), 16);
-  if (!dsalut) env->ThrowError("TNLMeans:  malloc failure (dsalut)!");
+  std::vector<const uint8_t*> pfplut(fci->size);
+  std::vector<const SDATA*> dslut(fci->size);
+  std::vector<int*> dsalut(fci->size);
   for (int i = 0; i < fci->size; ++i)
-    dsalut[i] = fci->frames[fci->getCachePos(i)]->dsa;
+    dsalut[i] = fci->frames[fci->getCachePos(i)]->dsa.data();
   int* ddsa = dsalut[Azi];
   PlanarFrame* srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
   const int startz = Azi - std::min(n, Azi);
@@ -418,7 +412,7 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
     {
       const int pos = fci->getCachePos(i);
       pfplut[i] = fci->frames[pos]->pf->GetPtr(b);
-      dslut[i] = fci->frames[pos]->ds[b];
+      dslut[i] = &fci->frames[pos]->ds[b];
     }
     const SDATA* dds = dslut[Azi];
     for (int y = 0; y < height; ++y)
@@ -431,9 +425,9 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
         const int startxt = std::max(x - Axi, 0);
         const int stopx = std::min(x + Axi, widthm1);
         const int doff = doffy + x;
-        double* dsum = &dds->sums[doff];
-        double* dweight = &dds->weights[doff];
-        double* dwmax = &dds->wmaxs[doff];
+        double* dsum = const_cast<double*>(&dds->sums[doff]);
+        double* dweight = const_cast<double*>(&dds->weights[doff]);
+        double* dwmax = const_cast<double*>(&dds->wmaxs[doff]);
         for (int z = startz; z <= stopz; ++z)
         {
           if (ddsa[z] == 1) continue;
@@ -455,9 +449,9 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
             for (int v = startx; v <= stopx; ++v)
             {
               const int coff = coffy + v;
-              double* csum = &cds->sums[coff];
-              double* cweight = &cds->weights[coff];
-              double* cwmax = &cds->wmaxs[coff];
+              double* csum = const_cast<double*>(&cds->sums[coff]);
+              double* cweight = const_cast<double*>(&cds->weights[coff]);
+              double* cwmax = const_cast<double*>(&cds->wmaxs[coff]);
               const int xL = -std::min(std::min(Sxi, v), x);
               const int xR = std::min(std::min(Sxi, widthm1 - v), widthm1 - x);
               const uint8_t* s1 = s1_saved + v;
@@ -502,12 +496,9 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
   int j = fci->size - 1;
   for (int i = 0; i < fci->size; ++i, --j)
   {
-    int* cdsa = fci->frames[fci->getCachePos(i)]->dsa;
+    int* cdsa = fci->frames[fci->getCachePos(i)]->dsa.data();
     if (ddsa[i] == 2) ddsa[i] = cdsa[j] = 1;
   }
-  _aligned_free(dsalut);
-  _aligned_free(dslut);
-  _aligned_free(pfplut);
 }
 
 template<bool SAD>
@@ -536,9 +527,8 @@ void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, 
       nl->setFNum(i);
     }
   }
-  const uint8_t** pfplut =
-    (const uint8_t**)_aligned_malloc(fci->size * sizeof(const uint8_t*), 16);
-  if (!pfplut) env->ThrowError("TNLMeans:  malloc failure (pfplut)!");
+
+  std::vector<const uint8_t*> pfplut(fci->size);
   PlanarFrame* srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
   const int startz = Azi - std::min(n, Azi);
   const int stopz = Azi + std::min(vi.num_frames - n - 1, Azi);
@@ -553,10 +543,10 @@ void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, 
     const int widthm1 = width - 1;
     for (int i = 0; i < fci->size; ++i)
       pfplut[i] = fci->frames[fci->getCachePos(i)]->pf->GetPtr(b);
-    SDATA* dds = fci->frames[fci->getCachePos(Azi)]->ds[b];
-    memset(dds->sums, 0, height * width * sizeof(double));
-    memset(dds->weights, 0, height * width * sizeof(double));
-    memset(dds->wmaxs, 0, height * width * sizeof(double));
+    SDATA* dds = &fci->frames[fci->getCachePos(Azi)]->ds[b];
+    std::fill(dds->sums.begin(), dds->sums.end(), 0.0);
+    std::fill(dds->weights.begin(), dds->weights.end(), 0.0);
+    std::fill(dds->wmaxs.begin(), dds->wmaxs.end(), 0.0);
     for (int y = Byi; y < height + Byi; y += Bydi)
     {
       const int starty = std::max(y - Ayi, Byi);
@@ -567,9 +557,9 @@ void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, 
         const int startx = std::max(x - Axi, Bxi);
         const int stopx = std::min(x + Axi, widthm1 - std::min(Bxi, widthm1 - x));
         const int doff = doffy + x;
-        double* dsum_saved = dds->sums + doff;
-        double* dweight_saved = dds->weights + doff;
-        double* dwmax_saved = dds->wmaxs + doff;
+        double* dsum_saved = dds->sums.data() + doff;
+        double* dweight_saved = dds->weights.data() + doff;
+        double* dwmax_saved = dds->wmaxs.data() + doff;
         for (int z = startz; z <= stopz; ++z)
         {
           const uint8_t* pf1p = pfplut[z];
@@ -636,5 +626,4 @@ void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, 
       srcp += pitch * Bydi;
     }
   }
-  _aligned_free(pfplut);
 }
