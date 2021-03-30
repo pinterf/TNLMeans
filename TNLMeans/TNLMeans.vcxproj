@@ -180,15 +180,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="memcpy_amd.cpp" />
     <ClCompile Include="PlanarFrame.cpp" />
     <ClCompile Include="TNLMeans.cpp" />
     <ClCompile Include="TNLMeansMS.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="avisynth.h" />
-    <ClInclude Include="internal.h" />
-    <ClInclude Include="memcpy_amd.h" />
+    <ClInclude Include="avs\alignment.h" />
+    <ClInclude Include="avs\capi.h" />
+    <ClInclude Include="avs\config.h" />
+    <ClInclude Include="avs\cpuid.h" />
+    <ClInclude Include="avs\filesystem.h" />
+    <ClInclude Include="avs\minmax.h" />
+    <ClInclude Include="avs\posix.h" />
+    <ClInclude Include="avs\types.h" />
+    <ClInclude Include="avs\win.h" />
     <ClInclude Include="PlanarFrame.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="TNLMeans.h" />

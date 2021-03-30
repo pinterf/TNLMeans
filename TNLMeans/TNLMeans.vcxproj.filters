@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="memcpy_amd.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PlanarFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -32,12 +29,6 @@
     <ClInclude Include="avisynth.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="internal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="memcpy_amd.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PlanarFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -45,6 +36,33 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TNLMeans.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avs\alignment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avs\capi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avs\config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avs\cpuid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avs\filesystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avs\minmax.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avs\posix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avs\types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="avs\win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
