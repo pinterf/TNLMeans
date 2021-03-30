@@ -27,6 +27,7 @@
 #include <float.h>
 #include "avisynth.h"
 #include "PlanarFrame.h"
+#include <vector>
 
 struct SDATA
 {
@@ -51,7 +52,7 @@ public:
 class nlCache
 {
 public:
-  nlFrame** frames;
+  std::vector<nlFrame*> frames;
   int start_pos, size;
   nlCache();
   nlCache(int _size, bool _useblocks, VideoInfo& vi, int cpuFlags);

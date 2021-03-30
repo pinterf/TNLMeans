@@ -40,8 +40,8 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
   weightsb = sumsb = nullptr;
   nlfs = nlhs = nullptr;
   ds = nullptr;
-  if (!vi.IsYV12() && !vi.IsYUY2())
-    env->ThrowError("TNLMeans:  only yuy2 and yv12 input are supported!");
+  if (vi.IsRGB() || vi.IsY() || vi.BitsPerComponent() > 8)
+    env->ThrowError("TNLMeans:  only yuy2 and 8 bit planar YUV input are supported!");
   if (h <= 0.0)
     env->ThrowError("TNLMeans:  h must be greater than 0!");
   if (a <= 0.0)
@@ -1165,20 +1165,17 @@ void nlFrame::setFNum(int i)
 
 nlCache::nlCache()
 {
-  frames = nullptr;
   start_pos = size = -20;
 }
 
 nlCache::nlCache(int _size, bool _useblocks, VideoInfo& vi, int cpuFlags)
 {
-  frames = nullptr;
   start_pos = size = -20;
   if (_size > 0)
   {
     start_pos = 0;
     size = _size;
-    frames = (nlFrame**)malloc(size * sizeof(nlFrame*));
-    memset(frames, 0, size * sizeof(nlFrame*));
+    frames.resize(size);
     for (int i = 0; i < size; ++i)
       frames[i] = new nlFrame(_useblocks, _size, vi, cpuFlags);
   }
@@ -1186,13 +1183,9 @@ nlCache::nlCache(int _size, bool _useblocks, VideoInfo& vi, int cpuFlags)
 
 nlCache::~nlCache()
 {
-  if (frames)
+  for (int i = 0; i < frames.size(); ++i)
   {
-    for (int i = 0; i < size; ++i)
-    {
-      if (frames[i]) delete frames[i];
-    }
-    free(frames);
+    if (frames[i]) delete frames[i];
   }
 }
 
