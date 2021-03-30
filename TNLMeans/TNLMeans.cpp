@@ -1250,8 +1250,18 @@ AVSValue __cdecl Create_TNLMeans(AVSValue args, void* user_data, IScriptEnvironm
 		args[10].AsFloat(1.0),args[11].AsFloat(usse?1.8:0.5),usse,hclip,env);
 }
 
-extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit2(IScriptEnvironment* env) 
-{
+/* New 2.6 requirement!!! */
+// Declare and initialise server pointers static storage.
+const AVS_Linkage* AVS_linkage = 0;
+
+/* New 2.6 requirement!!! */
+// DLL entry point called from LoadPlugin() to setup a user plugin.
+extern "C" __declspec(dllexport) const char* __stdcall
+AvisynthPluginInit3(IScriptEnvironment * env, const AVS_Linkage* const vectors) {
+
+  /* New 2.6 requirment!!! */
+  // Save the server pointers.
+  AVS_linkage = vectors;
 	env->AddFunction("TNLMeans", "c[Ax]i[Ay]i[Az]i[Sx]i[Sy]i[Bx]i[By]i[ms]b[rm]i[a]f[h]f[sse]b", 
 		Create_TNLMeans, 0);
 	return 0;
