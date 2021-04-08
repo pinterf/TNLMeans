@@ -30,90 +30,95 @@
 PVideoFrame __stdcall TNLMeans::GetFrameNT_MS(int n, IScriptEnvironment* env)
 {
   PVideoFrame src = child->GetFrame(n, env);
-  nlfs->pf->copyFrom(src, vi);
+
+  PVideoFrame dst = env->NewVideoFrame(vi);
+
+  nlfs->pf = src;
   PVideoFrame src_h = hclip->GetFrame(n, env);
   VideoInfo vi_h = hclip->GetVideoInfo();
-  nlhs->pf->copyFrom(src_h, vi_h);
+  nlhs->pf = src_h; // h_clip size is half in each direction
+
   if (Bx || By)
   {
     if (sse)
     {
-      MSWOZB<false>(nlfs, 2, 2, Sx, Sy, Bx, By, gw.data());
-      MSWOZB<false>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data());
+      MSWOZB<false>(nlfs.get(), 2, 2, Sx, Sy, Bx, By, gw.data());
+      MSWOZB<false>(nlhs.get(), (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data());
     }
     else
     {
-      MSWOZB<true>(nlfs, 2, 2, Sx, Sy, Bx, By, gw.data());
-      MSWOZB<true>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data());
+      MSWOZB<true>(nlfs.get(), 2, 2, Sx, Sy, Bx, By, gw.data());
+      MSWOZB<true>(nlhs.get(), (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data());
     }
   }
   else
   {
     if (sse)
     {
-      MSWOZ<false>(nlfs, 2, 2, Sx, Sy, gw.data());
-      MSWOZ<false>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data());
+      MSWOZ<false>(nlfs.get(), 2, 2, Sx, Sy, gw.data());
+      MSWOZ<false>(nlhs.get(), (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data());
     }
     else
     {
-      MSWOZ<true>(nlfs, 2, 2, Sx, Sy, gw.data());
-      MSWOZ<true>(nlhs, (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data());
+      MSWOZ<true>(nlfs.get(), 2, 2, Sx, Sy, gw.data());
+      MSWOZ<true>(nlhs.get(), (Ax + 1) >> 1, (Ay + 1) >> 1, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data());
     }
   }
-  combineMSWeights(dstPF, nlfs, nlhs);
-  PVideoFrame dst = env->NewVideoFrame(vi);
-  dstPF->copyTo(dst, vi);
+  combineMSWeights(&dst, nlfs.get(), nlhs.get());
   return dst;
 }
 
 PVideoFrame __stdcall TNLMeans::GetFrameT_MS(int n, IScriptEnvironment* env)
 {
+  PVideoFrame dst = env->NewVideoFrame(vi);
+
   if (Bx || By)
   {
     if (sse)
     {
-      MSWZB<false>(fcfs, 2, 2, Az, Sx, Sy, Bx, By, gw.data(), n, false, env);
-      MSWZB<false>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data(), n, true, env);
+      MSWZB<false>(fcfs.get(), 2, 2, Az, Sx, Sy, Bx, By, gw.data(), n, false, env);
+      MSWZB<false>(fchs.get(), (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data(), n, true, env);
     }
     else
     {
-      MSWZB<true>(fcfs, 2, 2, Az, Sx, Sy, Bx, By, gw.data(), n, false, env);
-      MSWZB<true>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data(), n, true, env);
+      MSWZB<true>(fcfs.get(), 2, 2, Az, Sx, Sy, Bx, By, gw.data(), n, false, env);
+      MSWZB<true>(fchs.get(), (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, (Bx + 1) >> 1, (By + 1) >> 1, gwh.data(), n, true, env);
     }
   }
   else
   {
     if (sse)
     {
-      MSWZ<false>(fcfs, 2, 2, Az, Sx, Sy, gw.data(), n, false, env);
-      MSWZ<false>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data(), n, true, env);
+      MSWZ<false>(fcfs.get(), 2, 2, Az, Sx, Sy, gw.data(), n, false, env);
+      MSWZ<false>(fchs.get(), (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data(), n, true, env);
     }
     else
     {
-      MSWZ<true>(fcfs, 2, 2, Az, Sx, Sy, gw.data(), n, false, env);
-      MSWZ<true>(fchs, (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data(), n, true, env);
+      MSWZ<true>(fcfs.get(), 2, 2, Az, Sx, Sy, gw.data(), n, false, env);
+      MSWZ<true>(fchs.get(), (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data(), n, true, env);
     }
   }
-  combineMSWeights(dstPF, fcfs->frames[fcfs->getCachePos(Az)], fchs->frames[fchs->getCachePos(Az)]);
-  PVideoFrame dst = env->NewVideoFrame(vi);
-  dstPF->copyTo(dst, vi);
+  combineMSWeights(&dst, fcfs.get()->frames[fcfs.get()->getCachePos(Az)], fchs.get()->frames[fchs.get()->getCachePos(Az)]);
+
   return dst;
 }
 
-void TNLMeans::combineMSWeights(PlanarFrame* dst, nlFrame* fs, nlFrame* hs)
+void TNLMeans::combineMSWeights(PVideoFrame* dst, nlFrame* fs, nlFrame* hs)
 {
-  for (int b = 0; b < 3; ++b)
+  // PVideoFrame pointer because GetWritePtr is OK only for refcount=1
+  for (int b = 0; b < planecount; ++b)
   {
-    uint8_t* dstp = dst->GetPtr(b);
-    const int dst_pitch = dst->GetPitch(b);
+    const int plane = planes[b];
+    uint8_t* dstp = (*dst)->GetWritePtr(plane);
+    const int dst_pitch = (*dst)->GetPitch(plane);
     uint8_t* dstpn = dstp + dst_pitch;
-    const int width = dst->GetWidth(b);
-    const int height = dst->GetHeight(b);
-    const uint8_t* srcp = fs->pf->GetPtr(b);
-    const int src_pitch = fs->pf->GetPitch(b);
+    const int width = (*dst)->GetRowSize(plane) / pixelsize;
+    const int height = (*dst)->GetHeight(plane);
+    const uint8_t* srcp = fs->pf->GetReadPtr(plane);
+    const int src_pitch = fs->pf->GetPitch(plane);
     const uint8_t* srcpn = srcp + src_pitch;
-    const uint8_t* srcph = hs->pf->GetPtr(b);
-    const int srch_pitch = hs->pf->GetPitch(b);
+    const uint8_t* srcph = hs->pf->GetReadPtr(plane);
+    const int srch_pitch = hs->pf->GetPitch(plane);
     const double* hsw = hs->ds[b].weights.data();
     const double* hss = hs->ds[b].sums.data();
     const double* hswm = hs->ds[b].wmaxs.data();
@@ -186,16 +191,17 @@ template<bool SAD>
 void TNLMeans::MSWOZ(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
   const int Syi, const double* gwi)
 {
-  PlanarFrame* srcPF = nl->pf;
+  PVideoFrame srcPF = nl->pf;
   const int Sxdi = Sxi * 2 + 1;
-  for (int b = 0; b < 3; ++b)
+  for (int b = 0; b < planecount; ++b)
   {
-    const uint8_t* srcp = srcPF->GetPtr(b);
-    const uint8_t* pfp = srcPF->GetPtr(b);
-    const int pitch = srcPF->GetPitch(b);
-    const int height = srcPF->GetHeight(b);
+    const int plane = planes[b];
+    const uint8_t* srcp = srcPF->GetReadPtr(plane);
+    const uint8_t* pfp = srcPF->GetReadPtr(plane);
+    const int pitch = srcPF->GetPitch(plane);
+    const int height = srcPF->GetHeight(plane);
     const int heightm1 = height - 1;
-    const int width = srcPF->GetWidth(b);
+    const int width = srcPF->GetRowSize(plane) / pixelsize;
     const int widthm1 = width - 1;
     SDATA* dds = &nl->ds[b];
     std::fill(dds->sums.begin(), dds->sums.end(), 0.0);
@@ -272,18 +278,19 @@ template<bool SAD>
 void TNLMeans::MSWOZB(nlFrame* nl, const int Axi, const int Ayi, const int Sxi,
   const int Syi, const int Bxi, const int Byi, const double* gwi)
 {
-  PlanarFrame* srcPF = nl->pf;
+  PVideoFrame srcPF = nl->pf;
   const int Bydi = Byi * 2 + 1;
   const int Bxdi = Bxi * 2 + 1;
   const int Sxdi = Sxi * 2 + 1;
-  for (int b = 0; b < 3; ++b)
+  for (int b = 0; b < planecount; ++b)
   {
-    const uint8_t* srcp = srcPF->GetPtr(b);
-    const uint8_t* pfp = srcPF->GetPtr(b);
-    const int pitch = srcPF->GetPitch(b);
-    const int height = srcPF->GetHeight(b);
+    const int plane = planes[b];
+    const uint8_t* srcp = srcPF->GetReadPtr(plane);
+    const uint8_t* pfp = srcPF->GetReadPtr(plane);
+    const int pitch = srcPF->GetPitch(plane);
+    const int height = srcPF->GetHeight(plane);
     const int heightm1 = height - 1;
-    const int width = srcPF->GetWidth(b);
+    const int width = srcPF->GetRowSize(plane) / pixelsize;
     const int widthm1 = width - 1;
     SDATA *dds = &nl->ds[b];
     std::fill(dds->sums.begin(), dds->sums.end(), 0.0);
@@ -380,11 +387,11 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
       if (hc) {
         PVideoFrame src_h = hclip->GetFrame(mapn(i), env);
         VideoInfo vi_h = hclip->GetVideoInfo();
-        nl->pf->copyFrom(src_h, vi_h);
+        nl->pf = src_h;
       }
       else {
         PVideoFrame src = child->GetFrame(mapn(i), env);
-        nl->pf->copyFrom(src, vi);
+        nl->pf = src;
       }
       nl->setFNum(i);
       fci->clearDS(nl);
@@ -396,22 +403,25 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
   for (int i = 0; i < fci->size; ++i)
     dsalut[i] = fci->frames[fci->getCachePos(i)]->dsa.data();
   int* ddsa = dsalut[Azi];
-  PlanarFrame* srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
+
+  PVideoFrame srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
+
   const int startz = Azi - std::min(n, Azi);
   const int stopz = Azi + std::min(vi.num_frames - n - 1, Azi);
-  for (int b = 0; b < 3; ++b)
+  for (int b = 0; b < planecount; ++b)
   {
-    const uint8_t* srcp = srcPF->GetPtr(b);
-    const uint8_t* pf2p = srcPF->GetPtr(b);
-    const int pitch = srcPF->GetPitch(b);
-    const int height = srcPF->GetHeight(b);
+    const int plane = planes[b];
+    const uint8_t* srcp = srcPF->GetReadPtr(plane);
+    const uint8_t* pf2p = srcPF->GetReadPtr(plane);
+    const int pitch = srcPF->GetPitch(plane);
+    const int height = srcPF->GetHeight(plane);
     const int heightm1 = height - 1;
-    const int width = srcPF->GetWidth(b);
+    const int width = srcPF->GetRowSize(plane) / pixelsize;
     const int widthm1 = width - 1;
     for (int i = 0; i < fci->size; ++i)
     {
       const int pos = fci->getCachePos(i);
-      pfplut[i] = fci->frames[pos]->pf->GetPtr(b);
+      pfplut[i] = fci->frames[pos]->pf->GetReadPtr(plane);
       dslut[i] = &fci->frames[pos]->ds[b];
     }
     const SDATA* dds = dslut[Azi];
@@ -518,31 +528,34 @@ void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, 
       if (hc) {
         PVideoFrame src_h = hclip->GetFrame(mapn(i), env);
         VideoInfo vi_h = hclip->GetVideoInfo();
-        nl->pf->copyFrom(src_h, vi_h);
+        nl->pf = src_h;
       }
       else {
         PVideoFrame src = child->GetFrame(mapn(i), env);
-        nl->pf->copyFrom(src, vi);
+        nl->pf = src;
       }
       nl->setFNum(i);
     }
   }
 
   std::vector<const uint8_t*> pfplut(fci->size);
-  PlanarFrame* srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
+
+  PVideoFrame srcPF = fci->frames[fci->getCachePos(Azi)]->pf;
+
   const int startz = Azi - std::min(n, Azi);
   const int stopz = Azi + std::min(vi.num_frames - n - 1, Azi);
-  for (int b = 0; b < 3; ++b)
+  for (int b = 0; b < planecount; ++b)
   {
-    const uint8_t* srcp = srcPF->GetPtr(b);
-    const uint8_t* pf2p = srcPF->GetPtr(b);
-    const int pitch = srcPF->GetPitch(b);
-    const int height = srcPF->GetHeight(b);
+    const int plane = planes[b];
+    const uint8_t* srcp = srcPF->GetReadPtr(plane);
+    const uint8_t* pf2p = srcPF->GetReadPtr(plane);
+    const int pitch = srcPF->GetPitch(plane);
+    const int height = srcPF->GetHeight(plane);
     const int heightm1 = height - 1;
-    const int width = srcPF->GetWidth(b);
+    const int width = srcPF->GetRowSize(plane) / pixelsize;
     const int widthm1 = width - 1;
     for (int i = 0; i < fci->size; ++i)
-      pfplut[i] = fci->frames[fci->getCachePos(i)]->pf->GetPtr(b);
+      pfplut[i] = fci->frames[fci->getCachePos(i)]->pf->GetReadPtr(plane);
     SDATA* dds = &fci->frames[fci->getCachePos(Azi)]->ds[b];
     std::fill(dds->sums.begin(), dds->sums.end(), 0.0);
     std::fill(dds->weights.begin(), dds->weights.end(), 0.0);

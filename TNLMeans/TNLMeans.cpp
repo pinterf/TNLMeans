@@ -27,6 +27,8 @@
 #include <cstring>
 #include "common.h"
 
+static int planes_y[4] = { PLANAR_Y, PLANAR_U, PLANAR_V, PLANAR_A };
+static int planes_r[4] = { PLANAR_G, PLANAR_B, PLANAR_R, PLANAR_A };
 
 TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, int _Bx,
   int _By, bool _ms, double _a, double _h, bool _sse, PClip _hclip, IScriptEnvironment* env) :
@@ -34,11 +36,14 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
   By(_By), ms(_ms), a(_a), h(_h), sse(_sse), hclip(_hclip)
 {
   int cpuFlags = env->GetCPUFlags();
-  fc = fcfs = fchs = nullptr;
-  dstPF = srcPFr = nullptr;
-  nlfs = nlhs = nullptr;
-  if (vi.IsRGB() || vi.IsY() || vi.BitsPerComponent() > 8)
-    env->ThrowError("TNLMeans:  only yuy2 and 8 bit planar YUV input are supported!");
+
+  planes = (vi.IsPlanarRGB() || vi.IsPlanarRGBA()) ? planes_r : planes_y;
+  pixelsize = vi.ComponentSize();
+  bits_per_pixel = vi.BitsPerComponent();
+  planecount = std::min(vi.NumComponents(), 3); // no alpha
+
+  if (!vi.IsPlanar() || vi.IsYUY2() || vi.BitsPerComponent() > 8)
+    env->ThrowError("TNLMeans:  only 8 bit Y or planar YUV or RGB inputs are supported!");
   if (h <= 0.0)
     env->ThrowError("TNLMeans:  h must be greater than 0!");
   if (a <= 0.0)
@@ -75,19 +80,18 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
   Azdm1 = Az * 2;
   a2 = a * a;
   child->SetCacheHints(CACHE_NOTHING, 0);
-  dstPF = new PlanarFrame(vi, cpuFlags);
   if (ms)
   {
     VideoInfo vi_h = hclip->GetVideoInfo();
     if (Az)
     {
-      fcfs = new nlCache(Az * 2 + 1, false, vi, cpuFlags);
-      fchs = new nlCache(Az * 2 + 1, false, vi_h, cpuFlags);
+      fcfs = std::make_unique<nlCache>(Az * 2 + 1, false, vi);
+      fchs = std::make_unique<nlCache>(Az * 2 + 1, false, vi_h);
     }
     else
     {
-      nlfs = new nlFrame(false, 1, vi, cpuFlags);
-      nlhs = new nlFrame(false, 1, vi_h, cpuFlags);
+      nlfs = std::make_unique<nlFrame>(false, 1, vi);
+      nlhs = std::make_unique<nlFrame>(false, 1, vi_h);
     }
     const int Sxh = (Sx + 1) >> 1;
     const int Syh = (Sy + 1) >> 1;
@@ -111,8 +115,9 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
   }
   else
   {
-    if (Az) fc = new nlCache(Az * 2 + 1, (Bx > 0 || By > 0), vi, cpuFlags);
-    else srcPFr = new PlanarFrame(vi, cpuFlags);
+    if (Az) {
+      fc = std::make_unique<nlCache>(Az * 2 + 1, (Bx > 0 || By > 0), vi);
+    }
     if (Bx || By)
     {
       sumsb.resize(Bxa);
@@ -142,13 +147,6 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
 
 TNLMeans::~TNLMeans()
 {
-  if (fc) delete fc;
-  if (fcfs) delete fcfs;
-  if (fchs) delete fchs;
-  if (dstPF) delete dstPF;
-  if (srcPFr) delete srcPFr;
-  if (nlfs) delete nlfs;
-  if (nlhs) delete nlhs;
 }
 
 PVideoFrame __stdcall TNLMeans::GetFrame(int n, IScriptEnvironment* env)
@@ -186,34 +184,38 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env)
     if (nl->fnum != i)
     {
       PVideoFrame src = child->GetFrame(mapn(i), env);
-      nl->pf->copyFrom(src, vi);
+      nl->pf = src;
       nl->setFNum(i);
       fc->clearDS(nl);
     }
   }
+
+  PVideoFrame dst = env->NewVideoFrame(vi);
+
   std::vector<const uint8_t*> pfplut(fc->size);
   std::vector<const SDATA*> dslut(fc->size);
   std::vector<int*> dsalut(fc->size);
   for (int i = 0; i < fc->size; ++i)
     dsalut[i] = fc->frames[fc->getCachePos(i)]->dsa.data();
   int* ddsa = dsalut[Az];
-  PlanarFrame* srcPF = fc->frames[fc->getCachePos(Az)]->pf;
+  PVideoFrame srcPF = fc->frames[fc->getCachePos(Az)]->pf;
   const int startz = Az - std::min(n, Az);
   const int stopz = Az + std::min(vi.num_frames - n - 1, Az);
-  for (int b = 0; b < 3; ++b)
+  for (int b = 0; b < planecount; ++b)
   {
-    const uint8_t* srcp = srcPF->GetPtr(b);
-    const uint8_t* pf2p = srcPF->GetPtr(b);
-    uint8_t* dstp = dstPF->GetPtr(b);
-    const int pitch = dstPF->GetPitch(b);
-    const int height = dstPF->GetHeight(b);
+    const int plane = planes[b];
+    const uint8_t* srcp = srcPF->GetReadPtr(plane);
+    const uint8_t* pf2p = srcPF->GetReadPtr(plane);
+    uint8_t* dstp = dst->GetWritePtr(plane);
+    const int pitch = dst->GetPitch(plane);
+    const int height = dst->GetHeight(plane);
     const int heightm1 = height - 1;
-    const int width = dstPF->GetWidth(b);
+    const int width = dst->GetRowSize(plane) / pixelsize;
     const int widthm1 = width - 1;
     for (int i = 0; i < fc->size; ++i)
     {
       const int pos = fc->getCachePos(i);
-      pfplut[i] = fc->frames[pos]->pf->GetPtr(b);
+      pfplut[i] = fc->frames[pos]->pf->GetReadPtr(plane);
       dslut[i] = &fc->frames[pos]->ds[b];
     }
     const SDATA* dds = dslut[Az];
@@ -306,8 +308,6 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env)
     int* cdsa = fc->frames[fc->getCachePos(i)]->dsa.data();
     if (ddsa[i] == 2) ddsa[i] = cdsa[j] = 1;
   }
-  PVideoFrame dst = env->NewVideoFrame(vi);
-  dstPF->copyTo(dst, vi);
   return dst;
 }
 
@@ -322,28 +322,31 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
     if (nl->fnum != i)
     {
       PVideoFrame src = child->GetFrame(mapn(i), env);
-      nl->pf->copyFrom(src, vi);
+      nl->pf = src;
       nl->setFNum(i);
     }
   }
+  PVideoFrame dst = env->NewVideoFrame(vi);
+
   std::vector<const uint8_t*> pfplut(fc->size);
-  PlanarFrame* srcPF = fc->frames[fc->getCachePos(Az)]->pf;
+  PVideoFrame srcPF = fc->frames[fc->getCachePos(Az)]->pf;
   const int startz = Az - std::min(n, Az);
   const int stopz = Az + std::min(vi.num_frames - n - 1, Az);
-  for (int b = 0; b < 3; ++b)
+  for (int b = 0; b < planecount; ++b)
   {
-    const uint8_t* srcp = srcPF->GetPtr(b);
-    const uint8_t* pf2p = srcPF->GetPtr(b);
-    uint8_t* dstp = dstPF->GetPtr(b);
-    const int pitch = dstPF->GetPitch(b);
-    const int height = dstPF->GetHeight(b);
+    const int plane = planes[b];
+    const uint8_t* srcp = srcPF->GetReadPtr(plane);
+    const uint8_t* pf2p = srcPF->GetReadPtr(plane);
+    uint8_t* dstp = dst->GetWritePtr(plane);
+    const int pitch = dst->GetPitch(plane);
+    const int height = dst->GetHeight(plane);
     const int heightm1 = height - 1;
-    const int width = dstPF->GetWidth(b);
+    const int width = dst->GetRowSize(plane) / pixelsize;
     const int widthm1 = width - 1;
     double* sumsb_saved = sumsb.data() + Bx;
     double* weightsb_saved = weightsb.data() + Bx;
     for (int i = 0; i < fc->size; ++i)
-      pfplut[i] = fc->frames[fc->getCachePos(i)]->pf->GetPtr(b);
+      pfplut[i] = fc->frames[fc->getCachePos(i)]->pf->GetReadPtr(plane);
     for (int y = By; y < height + By; y += Byd)
     {
       const int starty = std::max(y - Ay, By);
@@ -440,8 +443,6 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
       srcp += pitch * Byd;
     }
   }
-  PVideoFrame dst = env->NewVideoFrame(vi);
-  dstPF->copyTo(dst, vi);
   return dst;
 }
 
@@ -449,16 +450,19 @@ template<bool SAD>
 PVideoFrame __stdcall TNLMeans::GetFrameWOZ(int n, IScriptEnvironment* env)
 {
   PVideoFrame src = child->GetFrame(mapn(n), env);
-  srcPFr->copyFrom(src, vi);
-  for (int b = 0; b < 3; ++b)
+
+  PVideoFrame dst = env->NewVideoFrame(vi);
+
+  for (int b = 0; b < planecount; ++b)
   {
-    const uint8_t* srcp = srcPFr->GetPtr(b);
-    const uint8_t* pfp = srcPFr->GetPtr(b);
-    uint8_t* dstp = dstPF->GetPtr(b);
-    const int pitch = dstPF->GetPitch(b);
-    const int height = dstPF->GetHeight(b);
+    const int plane = planes[b];
+    const uint8_t* srcp = src->GetReadPtr(plane);
+    const uint8_t* pfp = src->GetReadPtr(plane);
+    uint8_t* dstp = dst->GetWritePtr(plane);
+    const int pitch = dst->GetPitch(plane);
+    const int height = dst->GetHeight(plane);
     const int heightm1 = height - 1;
-    const int width = dstPF->GetWidth(b);
+    const int width = dst->GetRowSize(plane) / pixelsize;
     const int widthm1 = width - 1;
     std::fill(ds.sums.begin(), ds.sums.end(), 0.0);
     std::fill(ds.weights.begin(), ds.weights.end(), 0.0);
@@ -533,8 +537,6 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZ(int n, IScriptEnvironment* env)
       srcp += pitch;
     }
   }
-  PVideoFrame dst = env->NewVideoFrame(vi);
-  dstPF->copyTo(dst, vi);
   return dst;
 }
 
@@ -542,16 +544,19 @@ template<bool SAD>
 PVideoFrame __stdcall TNLMeans::GetFrameWOZB(int n, IScriptEnvironment* env)
 {
   PVideoFrame src = child->GetFrame(mapn(n), env);
-  srcPFr->copyFrom(src, vi);
-  for (int b = 0; b < 3; ++b)
+
+  PVideoFrame dst = env->NewVideoFrame(vi);
+
+  for (int b = 0; b < planecount; ++b)
   {
-    const uint8_t* srcp = srcPFr->GetPtr(b);
-    const uint8_t* pfp = srcPFr->GetPtr(b);
-    uint8_t* dstp = dstPF->GetPtr(b);
-    const int pitch = dstPF->GetPitch(b);
-    const int height = dstPF->GetHeight(b);
+    const int plane = planes[b];
+    const uint8_t* srcp = src->GetReadPtr(plane);
+    const uint8_t* pfp = src->GetReadPtr(plane);
+    uint8_t* dstp = dst->GetWritePtr(plane);
+    const int pitch = dst->GetPitch(plane);
+    const int height = dst->GetHeight(plane);
     const int heightm1 = height - 1;
-    const int width = dstPF->GetWidth(b);
+    const int width = dst->GetRowSize(plane) / pixelsize;
     const int widthm1 = width - 1;
     double* sumsb_saved = sumsb.data() + Bx;
     double* weightsb_saved = weightsb.data() + Bx;
@@ -646,8 +651,6 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZB(int n, IScriptEnvironment* env)
       srcp += pitch * Byd;
     }
   }
-  PVideoFrame dst = env->NewVideoFrame(vi);
-  dstPF->copyTo(dst, vi);
   return dst;
 }
 
@@ -664,18 +667,22 @@ nlFrame::nlFrame()
   pf = nullptr;
 }
 
-nlFrame::nlFrame(bool _useblocks, int _size, VideoInfo& vi, int cpuFlags)
+nlFrame::nlFrame(bool _useblocks, int _size, VideoInfo& vi)
 {
   fnum = -20;
-  pf = new PlanarFrame(vi, cpuFlags);
+  pf = nullptr;
   if (!_useblocks)
   {
-    ds.resize(3); // three planes
-    for (int i = 0; i < 3; ++i)
+    const int planecount = std::min(vi.NumComponents(), 3);
+    const int* planes = (vi.IsPlanarRGB() || vi.IsPlanarRGBA()) ? planes_r : planes_y;
+    ds.resize(planecount);
+    for (int i = 0; i < planecount; ++i)
     {
-      ds[i].sums.resize(pf->GetHeight(i) * pf->GetWidth(i));
-      ds[i].weights.resize(pf->GetHeight(i) * pf->GetWidth(i));
-      ds[i].wmaxs.resize(pf->GetHeight(i) * pf->GetWidth(i));
+      const int plane = planes[i];
+      const int pixels = (vi.width >> vi.GetPlaneWidthSubsampling(plane)) * (vi.height >> vi.GetPlaneHeightSubsampling(plane));
+      ds[i].sums.resize(pixels);
+      ds[i].weights.resize(pixels);
+      ds[i].wmaxs.resize(pixels);
     }
     dsa.resize(_size, 0); // init with zero
   }
@@ -683,7 +690,7 @@ nlFrame::nlFrame(bool _useblocks, int _size, VideoInfo& vi, int cpuFlags)
 
 nlFrame::~nlFrame()
 {
-  if (pf) delete pf;
+  pf = nullptr;
 }
 
 void nlFrame::setFNum(int i)
@@ -696,7 +703,7 @@ nlCache::nlCache()
   start_pos = size = -20;
 }
 
-nlCache::nlCache(int _size, bool _useblocks, VideoInfo& vi, int cpuFlags)
+nlCache::nlCache(int _size, bool _useblocks, VideoInfo& vi)
 {
   start_pos = size = -20;
   if (_size > 0)
@@ -705,7 +712,7 @@ nlCache::nlCache(int _size, bool _useblocks, VideoInfo& vi, int cpuFlags)
     size = _size;
     frames.resize(size);
     for (int i = 0; i < size; ++i)
-      frames[i] = new nlFrame(_useblocks, _size, vi, cpuFlags);
+      frames[i] = new nlFrame(_useblocks, _size, vi);
   }
 }
 
@@ -736,7 +743,7 @@ void nlCache::resetCacheStart(int first, int last)
 
 void nlCache::clearDS(nlFrame* nl)
 {
-  for (int i = 0; i < 3; ++i)
+  for (int i = 0; i < nl->ds.size(); ++i)
   {
     std::fill(nl->ds[i].sums.begin(), nl->ds[i].sums.end(), 0.0);
     std::fill(nl->ds[i].weights.begin(), nl->ds[i].weights.end(), 0.0);
@@ -753,15 +760,21 @@ int nlCache::getCachePos(int n)
 AVSValue __cdecl Create_TNLMeans(AVSValue args, void* user_data, IScriptEnvironment* env)
 {
   PClip hclip;
-  if (args[8].IsBool() && args[8].AsBool())
+  if (args[8].IsBool() && args[8].AsBool()) // ms
   {
     const int rm = args[9].IsInt() ? args[9].AsInt() : 4;
     if (rm < 0 || rm > 5)
       env->ThrowError("TNLMeans:  rm must be set to 0, 1, 2, 3, 4, or 5!");
     if (!args[0].IsClip())
       env->ThrowError("TNLMeans:  first argument must be a clip!");
-    AVSValue argsv[4] = { args[0].AsClip(), args[0].AsClip()->GetVideoInfo().width / 2,
-      args[0].AsClip()->GetVideoInfo().height / 2 };
+
+    const int w = args[0].AsClip()->GetVideoInfo().width;
+    const int h = args[0].AsClip()->GetVideoInfo().height;
+
+    if (w % 2 != 0 || h % 2 != 0)
+      env->ThrowError("TNLMeans:  clip width and height must be even when 'ms' is true!");
+
+    AVSValue argsv[4] = { args[0].AsClip(), w / 2, h / 2 };
     try {
       hclip = env->Invoke(rm == 0 ? "PointResize" :
         rm == 1 ? "BilinearResize" :

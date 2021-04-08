@@ -26,8 +26,8 @@
 #include <malloc.h>
 #include <float.h>
 #include "avisynth.h"
-#include "PlanarFrame.h"
 #include <vector>
+#include <memory>
 
 struct SDATA
 {
@@ -40,11 +40,11 @@ class nlFrame
 {
 public:
   int fnum;
-  PlanarFrame* pf;
+  PVideoFrame pf;
   std::vector<SDATA> ds;
   std::vector<int> dsa;
   nlFrame();
-  nlFrame(bool _useblocks, int _size, VideoInfo& vi, int cpuFlags);
+  nlFrame(bool _useblocks, int _size, VideoInfo& vi);
   ~nlFrame();
   void setFNum(int i);
 };
@@ -55,7 +55,7 @@ public:
   std::vector<nlFrame*> frames;
   int start_pos, size;
   nlCache();
-  nlCache(int _size, bool _useblocks, VideoInfo& vi, int cpuFlags);
+  nlCache(int _size, bool _useblocks, VideoInfo& vi);
   ~nlCache();
   void resetCacheStart(int first, int last);
   int getCachePos(int n);
@@ -72,15 +72,27 @@ private:
   int Bxd, Byd, Bxa;
   int Axd, Ayd, Axa, Azdm1;
   double a, a2, h, hin, h2in;
+
   std::vector<double> gw;
   std::vector<double> sumsb;
   std::vector<double> weightsb;
   std::vector<double> gwh;
+
   bool ms, sse;
-  nlCache* fc, * fcfs, * fchs;
+
+  std::unique_ptr<nlCache> fc;
+  std::unique_ptr<nlCache> fcfs;
+  std::unique_ptr<nlCache> fchs;
   SDATA ds;
-  PlanarFrame* dstPF, * srcPFr;
-  nlFrame* nlfs, * nlhs;
+
+  int pixelsize;
+  int bits_per_pixel;
+  int planecount;
+  int* planes;
+
+  std::unique_ptr<nlFrame> nlfs;
+  std::unique_ptr<nlFrame> nlhs;
+
   PClip hclip;
   int mapn(int n);
 
@@ -116,7 +128,7 @@ private:
     const int Syi, const int Bxi, const int Byi, const double* gwi, int n, bool hc,
     IScriptEnvironment* env);
 
-  void combineMSWeights(PlanarFrame* dst, nlFrame* fs, nlFrame* hs);
+  void combineMSWeights(PVideoFrame* dst, nlFrame* fs, nlFrame* hs);
 
 public:
   PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env);
@@ -124,4 +136,9 @@ public:
     int _Bx, int _By, bool _ms, double _a, double _h, bool _sse, PClip _hclip,
     IScriptEnvironment* env);
   ~TNLMeans();
+
+  int __stdcall SetCacheHints(int cachehints, int frame_range) override {
+    return cachehints == CACHE_GET_MTMODE ? MT_MULTI_INSTANCE : 0;
+  }
+
 };
