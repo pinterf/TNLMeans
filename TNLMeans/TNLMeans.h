@@ -65,6 +65,8 @@ public:
 class TNLMeans : public GenericVideoFilter
 {
 private:
+  bool has_at_least_v8;
+
   int Ax, Ay, Az;
   int Sx, Sy;
   int Bx, By;

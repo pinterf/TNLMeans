@@ -35,7 +35,9 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
   GenericVideoFilter(_child), Ax(_Ax), Ay(_Ay), Az(_Az), Sx(_Sx), Sy(_Sy), Bx(_Bx),
   By(_By), ms(_ms), a(_a), h(_h), sse(_sse), hclip(_hclip)
 {
-  int cpuFlags = env->GetCPUFlags();
+  has_at_least_v8 = true;
+  try { env->CheckVersion(8); }
+  catch (const AvisynthError&) { has_at_least_v8 = false; }
 
   planes = (vi.IsPlanarRGB() || vi.IsPlanarRGBA()) ? planes_r : planes_y;
   pixelsize = vi.ComponentSize();
@@ -190,15 +192,16 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env)
     }
   }
 
-  PVideoFrame dst = env->NewVideoFrame(vi);
-
   std::vector<const uint8_t*> pfplut(fc->size);
   std::vector<const SDATA*> dslut(fc->size);
   std::vector<int*> dsalut(fc->size);
   for (int i = 0; i < fc->size; ++i)
     dsalut[i] = fc->frames[fc->getCachePos(i)]->dsa.data();
   int* ddsa = dsalut[Az];
+
   PVideoFrame srcPF = fc->frames[fc->getCachePos(Az)]->pf;
+  PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &srcPF) : env->NewVideoFrame(vi); // frame property support
+
   const int startz = Az - std::min(n, Az);
   const int stopz = Az + std::min(vi.num_frames - n - 1, Az);
   for (int b = 0; b < planecount; ++b)
@@ -326,10 +329,12 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
       nl->setFNum(i);
     }
   }
-  PVideoFrame dst = env->NewVideoFrame(vi);
 
   std::vector<const uint8_t*> pfplut(fc->size);
+
   PVideoFrame srcPF = fc->frames[fc->getCachePos(Az)]->pf;
+  PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &srcPF) : env->NewVideoFrame(vi); // frame property support
+
   const int startz = Az - std::min(n, Az);
   const int stopz = Az + std::min(vi.num_frames - n - 1, Az);
   for (int b = 0; b < planecount; ++b)
@@ -450,8 +455,7 @@ template<bool SAD>
 PVideoFrame __stdcall TNLMeans::GetFrameWOZ(int n, IScriptEnvironment* env)
 {
   PVideoFrame src = child->GetFrame(mapn(n), env);
-
-  PVideoFrame dst = env->NewVideoFrame(vi);
+  PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &src) : env->NewVideoFrame(vi); // frame property support
 
   for (int b = 0; b < planecount; ++b)
   {
@@ -544,8 +548,7 @@ template<bool SAD>
 PVideoFrame __stdcall TNLMeans::GetFrameWOZB(int n, IScriptEnvironment* env)
 {
   PVideoFrame src = child->GetFrame(mapn(n), env);
-
-  PVideoFrame dst = env->NewVideoFrame(vi);
+  PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &src) : env->NewVideoFrame(vi); // frame property support
 
   for (int b = 0; b < planecount; ++b)
   {

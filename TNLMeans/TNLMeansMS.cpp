@@ -30,8 +30,7 @@
 PVideoFrame __stdcall TNLMeans::GetFrameNT_MS(int n, IScriptEnvironment* env)
 {
   PVideoFrame src = child->GetFrame(n, env);
-
-  PVideoFrame dst = env->NewVideoFrame(vi);
+  PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &src) : env->NewVideoFrame(vi); // frame property support
 
   nlfs->pf = src;
   PVideoFrame src_h = hclip->GetFrame(n, env);
@@ -98,7 +97,10 @@ PVideoFrame __stdcall TNLMeans::GetFrameT_MS(int n, IScriptEnvironment* env)
       MSWZ<true>(fchs.get(), (Ax + 1) >> 1, (Ay + 1) >> 1, Az, (Sx + 1) >> 1, (Sy + 1) >> 1, gwh.data(), n, true, env);
     }
   }
-  combineMSWeights(&dst, fcfs.get()->frames[fcfs.get()->getCachePos(Az)], fchs.get()->frames[fchs.get()->getCachePos(Az)]);
+
+  nlFrame* fs = fcfs.get()->frames[fcfs.get()->getCachePos(Az)];
+  env->copyFrameProps(fs->pf, dst);
+  combineMSWeights(&dst, fs, fchs.get()->frames[fchs.get()->getCachePos(Az)]);
 
   return dst;
 }
