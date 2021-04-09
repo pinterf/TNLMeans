@@ -44,8 +44,9 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
   bits_per_pixel = vi.BitsPerComponent();
   planecount = std::min(vi.NumComponents(), 3); // no alpha
 
-  if (!vi.IsPlanar() || vi.IsYUY2() || vi.BitsPerComponent() > 16)
-    env->ThrowError("TNLMeans:  only 8-16 bit Y or planar YUV or RGB inputs are supported!");
+  // YUY2 support by no-the-fly YV16 conversion
+  if (!vi.IsPlanar() || vi.BitsPerComponent() > 16)
+    env->ThrowError("TNLMeans:  only YUY2, 8-16 bit Y, planar YUV or planar RGB inputs are supported!");
   if (h <= 0.0)
     env->ThrowError("TNLMeans:  h must be greater than 0!");
   if (a <= 0.0)
@@ -847,6 +848,16 @@ int nlCache::getCachePos(int n)
 
 AVSValue __cdecl Create_TNLMeans(AVSValue args, void* user_data, IScriptEnvironment* env)
 {
+  PClip clip = args[0].AsClip();
+
+  const bool isYUY2 = clip->GetVideoInfo().IsYUY2();
+
+  // YUY2 support kept by converting pre-post on-the fly
+  if (isYUY2) {
+    AVSValue new_args[1] = { clip };
+    clip = env->Invoke("ConvertToYV16", AVSValue(new_args, 1)).AsClip();
+  }
+
   PClip hclip;
   if (args[8].IsBool() && args[8].AsBool()) // ms
   {
@@ -856,13 +867,13 @@ AVSValue __cdecl Create_TNLMeans(AVSValue args, void* user_data, IScriptEnvironm
     if (!args[0].IsClip())
       env->ThrowError("TNLMeans:  first argument must be a clip!");
 
-    const int w = args[0].AsClip()->GetVideoInfo().width;
-    const int h = args[0].AsClip()->GetVideoInfo().height;
+    const int w = clip->GetVideoInfo().width;
+    const int h = clip->GetVideoInfo().height;
 
     if (w % 2 != 0 || h % 2 != 0)
       env->ThrowError("TNLMeans:  clip width and height must be even when 'ms' is true!");
 
-    AVSValue argsv[4] = { args[0].AsClip(), w / 2, h / 2 };
+    AVSValue argsv[4] = { clip, w / 2, h / 2 };
     try {
       hclip = env->Invoke(rm == 0 ? "PointResize" :
         rm == 1 ? "BilinearResize" :
@@ -881,9 +892,15 @@ AVSValue __cdecl Create_TNLMeans(AVSValue args, void* user_data, IScriptEnvironm
     }
   }
   const bool usse = args[12].IsBool() ? args[12].AsBool() : true;
-  return new TNLMeans(args[0].AsClip(), args[1].AsInt(4), args[2].AsInt(4), args[3].AsInt(0),
+  auto Result = new TNLMeans(clip, args[1].AsInt(4), args[2].AsInt(4), args[3].AsInt(0),
     args[4].AsInt(2), args[5].AsInt(2), args[6].AsInt(1), args[7].AsInt(1), args[8].AsBool(false),
     args[10].AsFloat(1.0), args[11].AsFloat(usse ? 1.8f : 0.5f), usse, hclip, env);
+
+  if (isYUY2) {
+    AVSValue new_args2[1] = { Result };
+    return env->Invoke("ConvertToYUY2", AVSValue(new_args2, 1)).AsClip();
+  }
+  return Result;
 }
 
 // Declare and initialise server pointers static storage.
