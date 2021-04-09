@@ -140,7 +140,7 @@ private:
   void combineMSWeights(PVideoFrame* dst, nlFrame* fs, nlFrame* hs);
 
 public:
-  PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env);
+  PVideoFrame __stdcall GetFrame(int n, IScriptEnvironment* env) override;
   TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy,
     int _Bx, int _By, bool _ms, double _a, double _h, bool _sse, PClip _hclip,
     IScriptEnvironment* env);

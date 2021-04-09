@@ -33,7 +33,7 @@ static int planes_r[4] = { PLANAR_G, PLANAR_B, PLANAR_R, PLANAR_A };
 TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, int _Bx,
   int _By, bool _ms, double _a, double _h, bool _sse, PClip _hclip, IScriptEnvironment* env) :
   GenericVideoFilter(_child), Ax(_Ax), Ay(_Ay), Az(_Az), Sx(_Sx), Sy(_Sy), Bx(_Bx),
-  By(_By), ms(_ms), a(_a), h(_h), sse(_sse), hclip(_hclip)
+  By(_By), a(_a), h(_h), ms(_ms), sse(_sse), hclip(_hclip)
 {
   has_at_least_v8 = true;
   try { env->CheckVersion(8); }
@@ -453,7 +453,6 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
             const pixel_t* s2_saved = pf2p + (y + yT) * src_pitch + x;
             const pixel_t* sbp_saved = pf1p + (u - By) * pf1p_pitch;
             const double* gw_saved = gw.data() + (yT + Sy) * Sxd + Sx;
-            const int pf1pl = u * pf1p_pitch;
             for (int v = startx; v <= stopx; ++v)
             {
               if (z == Az && u == y && v == x) continue;
@@ -807,7 +806,7 @@ nlCache::nlCache(int _size, bool _useblocks, VideoInfo& vi)
 
 nlCache::~nlCache()
 {
-  for (int i = 0; i < frames.size(); ++i)
+  for (int i = 0; i < (int)frames.size(); ++i)
   {
     if (frames[i]) delete frames[i];
   }
@@ -832,7 +831,7 @@ void nlCache::resetCacheStart(int first, int last)
 
 void nlCache::clearDS(nlFrame* nl)
 {
-  for (int i = 0; i < nl->ds.size(); ++i)
+  for (int i = 0; i < (int)nl->ds.size(); ++i)
   {
     std::fill(nl->ds[i].sums.begin(), nl->ds[i].sums.end(), 0.0);
     std::fill(nl->ds[i].weights.begin(), nl->ds[i].weights.end(), 0.0);

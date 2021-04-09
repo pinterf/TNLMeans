@@ -35,7 +35,6 @@ PVideoFrame TNLMeans::GetFrameNT_MS(int n, IScriptEnvironment* env)
 
   nlfs->pf = src;
   PVideoFrame src_h = hclip->GetFrame(n, env);
-  VideoInfo vi_h = hclip->GetVideoInfo();
   nlhs->pf = src_h; // h_clip size is half in each direction
 
   if (Bx || By)
@@ -414,7 +413,6 @@ void TNLMeans::MSWZ(nlCache* fci, const int Axi, const int Ayi, const int Azi, c
     {
       if (hc) {
         PVideoFrame src_h = hclip->GetFrame(mapn(i), env);
-        VideoInfo vi_h = hclip->GetVideoInfo();
         nl->pf = src_h;
       }
       else {
@@ -562,7 +560,6 @@ void TNLMeans::MSWZB(nlCache* fci, const int Axi, const int Ayi, const int Azi, 
     {
       if (hc) {
         PVideoFrame src_h = hclip->GetFrame(mapn(i), env);
-        VideoInfo vi_h = hclip->GetVideoInfo();
         nl->pf = src_h;
       }
       else {
