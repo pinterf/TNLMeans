@@ -88,7 +88,7 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
   Axa = Axd * Ayd;
   Azdm1 = Az * 2;
   a2 = a * a;
-  child->SetCacheHints(CACHE_NOTHING, 0);
+
   if (ms)
   {
     VideoInfo vi_h = hclip->GetVideoInfo();
