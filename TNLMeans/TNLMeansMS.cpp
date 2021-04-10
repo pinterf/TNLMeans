@@ -33,6 +33,8 @@ PVideoFrame TNLMeans::GetFrameNT_MS(int n, IScriptEnvironment* env)
 {
   PVideoFrame src = child->GetFrame(n, env);
   PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &src) : env->NewVideoFrame(vi); // frame property support
+  if (vi.IsYUVA() || vi.IsPlanarRGBA())
+    env->BitBlt(dst->GetWritePtr(PLANAR_A), dst->GetPitch(PLANAR_A), src->GetReadPtr(PLANAR_A), src->GetPitch(PLANAR_A), src->GetRowSize(PLANAR_A), src->GetHeight(PLANAR_A));
 
   nlfs->pf = src;
   PVideoFrame src_h = hclip->GetFrame(n, env);
@@ -103,6 +105,8 @@ PVideoFrame TNLMeans::GetFrameT_MS(int n, IScriptEnvironment* env)
   nlFrame* fs = fcfs.get()->frames[fcfs.get()->getCachePos(Az)];
   if(has_at_least_v8)
     env->copyFrameProps(fs->pf, dst);
+  if (vi.IsYUVA() || vi.IsPlanarRGBA())
+    env->BitBlt(dst->GetWritePtr(PLANAR_A), dst->GetPitch(PLANAR_A), fs->pf->GetReadPtr(PLANAR_A), fs->pf->GetPitch(PLANAR_A), fs->pf->GetRowSize(PLANAR_A), fs->pf->GetHeight(PLANAR_A));
   combineMSWeights<pixel_t>(&dst, fs, fchs.get()->frames[fchs.get()->getCachePos(Az)]);
 
   return dst;

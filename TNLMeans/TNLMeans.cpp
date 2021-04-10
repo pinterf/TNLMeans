@@ -45,7 +45,7 @@ TNLMeans::TNLMeans(PClip _child, int _Ax, int _Ay, int _Az, int _Sx, int _Sy, in
   bits_per_pixel = vi.BitsPerComponent();
   planecount = std::min(vi.NumComponents(), 3); // no alpha
 
-  // YUY2 support by no-the-fly YV16 conversion
+  // YUY2 support by on-the-fly YV16 conversion
   if (!vi.IsPlanar() || vi.BitsPerComponent() > 16)
     env->ThrowError("TNLMeans:  only YUY2, 8-16 bit Y, planar YUV or planar RGB inputs are supported!");
   if (h <= 0.0)
@@ -266,6 +266,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZ(int n, IScriptEnvironment* env)
 
   PVideoFrame srcPF = fc->frames[fc->getCachePos(Az)]->pf;
   PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &srcPF) : env->NewVideoFrame(vi); // frame property support
+  if (vi.IsYUVA() || vi.IsPlanarRGBA())
+    env->BitBlt(dst->GetWritePtr(PLANAR_A), dst->GetPitch(PLANAR_A), srcPF->GetReadPtr(PLANAR_A), srcPF->GetPitch(PLANAR_A), srcPF->GetRowSize(PLANAR_A), srcPF->GetHeight(PLANAR_A));
 
   const int startz = Az - std::min(n, Az);
   const int stopz = Az + std::min(vi.num_frames - n - 1, Az);
@@ -406,6 +408,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWZB(int n, IScriptEnvironment* env)
 
   PVideoFrame srcPF = fc->frames[fc->getCachePos(Az)]->pf;
   PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &srcPF) : env->NewVideoFrame(vi); // frame property support
+  if (vi.IsYUVA() || vi.IsPlanarRGBA())
+    env->BitBlt(dst->GetWritePtr(PLANAR_A), dst->GetPitch(PLANAR_A), srcPF->GetReadPtr(PLANAR_A), srcPF->GetPitch(PLANAR_A), srcPF->GetRowSize(PLANAR_A), srcPF->GetHeight(PLANAR_A));
 
   const int startz = Az - std::min(n, Az);
   const int stopz = Az + std::min(vi.num_frames - n - 1, Az);
@@ -532,6 +536,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZ(int n, IScriptEnvironment* env)
 {
   PVideoFrame src = child->GetFrame(mapn(n), env);
   PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &src) : env->NewVideoFrame(vi); // frame property support
+  if (vi.IsYUVA() || vi.IsPlanarRGBA())
+    env->BitBlt(dst->GetWritePtr(PLANAR_A), dst->GetPitch(PLANAR_A), src->GetReadPtr(PLANAR_A), src->GetPitch(PLANAR_A), src->GetRowSize(PLANAR_A), src->GetHeight(PLANAR_A));
 
   const int MAX_PIXEL_VALUE = sizeof(pixel_t) == 1 ? 255 : (1 << bits_per_pixel) - 1;
   // 16 bits SSD requires int64 intermediate
@@ -630,6 +636,8 @@ PVideoFrame __stdcall TNLMeans::GetFrameWOZB(int n, IScriptEnvironment* env)
 {
   PVideoFrame src = child->GetFrame(mapn(n), env);
   PVideoFrame dst = has_at_least_v8 ? env->NewVideoFrameP(vi, &src) : env->NewVideoFrame(vi); // frame property support
+  if (vi.IsYUVA() || vi.IsPlanarRGBA())
+    env->BitBlt(dst->GetWritePtr(PLANAR_A), dst->GetPitch(PLANAR_A), src->GetReadPtr(PLANAR_A), src->GetPitch(PLANAR_A), src->GetRowSize(PLANAR_A), src->GetHeight(PLANAR_A));
 
   const int MAX_PIXEL_VALUE = sizeof(pixel_t) == 1 ? 255 : (1 << bits_per_pixel) - 1;
   // 16 bits SSD requires int64 intermediate
