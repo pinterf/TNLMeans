@@ -1,7 +1,8 @@
                                                                                                        |
-                                    TNLMeans for Avisynth v2.5.x                                       |
-                                       v1.0.3  (28 August 2007)                                        |
+                                        TNLMeans for Avisynth                                          |
+                                         v1.1  (09 April 2021)                                         |
                                             by tritical                                                |
+                                         addons by pinterf                                             |
                                                                                                        |
                                              HELP FILE                                                 |
 --------------------------------------------------------------------------------------------------------
@@ -68,7 +69,11 @@ THEORY OF OPERATION:
       More information can be found by following the links to papers about NL-means under
    the TNLMeans portion of http://bengal.missouri.edu/~kes25c/.
 
+   Links:
+   Avisynth wiki: http://avisynth.nl/index.php/TNLMeans
 
+   Github: https://github.com/pinterf/TNLMeans
+   This fork is based on the original TNLMeans 1.0.3.
 
 PARAMETERS:
 
@@ -174,6 +179,16 @@ PARAMETERS:
 
 CHANGE LIST:
 
+   04/09/2021  v1.1 (pinterf)
+       - project moved to github https://github.com/pinterf/TNLMeans
+       - project update to Visual Studio 2019
+       - Change to Avisynth v2.6 interface
+       - pass frame props for Avs+ interface version >= 8
+       - Source code syntax updates, gcc, clang
+       - add planar YUV and RGB formats
+       - add x64 config
+       - linux/gcc build
+       - 10-16 bit support
 
    08/28/2007  v1.0.3
 
