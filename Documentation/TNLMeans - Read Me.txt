@@ -1,11 +1,10 @@
                                                                                                        |
                                         TNLMeans for Avisynth                                          |
-                                         v1.1  (09 April 2021)                                         |
+                                         v1.1  (10 April 2021)                                         |
                                             by tritical                                                |
                                          addons by pinterf                                             |
                                                                                                        |
                                              HELP FILE                                                 |
---------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------
 
 
@@ -16,13 +15,14 @@ INFO:
    method, TNLMeans also supports extension into 3D, a faster, block based approach, and a
    multiscale version.
 
+   Filter works on YUY2 and all 8-16 bits Y and planar YUV/RGB color spaces.
+   Alpha channel - if exists - is simply copied.
+   Filter reports itself as MT_MULTI_INSTANCE under Avisynth+.
 
    Syntax =>
 
       TNLMeans(int Ax, int Ay, int Az, int Sx, int Sy, int Bx, int By, bool ms, int rm, float a,
                  float h, bool sse)
-
-
 
 THEORY OF OPERATION:
 
@@ -178,62 +178,8 @@ PARAMETERS:
 
 
 CHANGE LIST:
+   see in CHANGELOG.md
 
-   04/09/2021  v1.1 (pinterf)
-       - project moved to github https://github.com/pinterf/TNLMeans
-       - project update to Visual Studio 2019
-       - Change to Avisynth v2.6 interface
-       - pass frame props for Avs+ interface version >= 8
-       - Source code syntax updates, gcc, clang
-       - add planar YUV and RGB formats
-       - add x64 config
-       - linux/gcc build
-       - 10-16 bit support
-
-   08/28/2007  v1.0.3
-
-       - Removed fast exp() approximation that was used for sse=false.  Turns out it was quite
-            inaccurate and had overflow problems resulting in artifacts.
-
-
-   07/30/2006  v1.0.2
-
-       - Fixed a problem with small weights causing artifacts
-
-
-   06/19/2006  v1.0.1
-
-       - Fixed a bug that caused a crash when ms=true was used with yuy2 input
-
-
-   05/31/2006  v1.0 Final
-
-       - Fixed always creating the downsampled clip unless ms=false was explicitly
-           specified
-
-
-   05/25/2006  v1.0 Beta 2
-
-       + Added multiscale version (parameters ms/rm)
-       + Added sse parameter
-       + optimized non-block based routines by buffering (100% speed increase)
-       - removed b parameter
-       - fixed a bug in the block based routines that caused some blocks
-           in the search window not to be tested
-       - changed defaults for ax/ay/sx/sy/h
-
-
-   05/17/2006  v1.0 Beta 1
-
-       - Initial Release
-
-
-
-TO DO LIST (for v2.0):
-
-
+TO DO LIST (tritical):
      - adaptively adjust the 'h' parameter in different parts of the image
 
-
-
-contact:    doom9.org forum (nick = tritical)

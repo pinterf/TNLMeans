@@ -21,11 +21,14 @@ Additional works by pinterf
 - Update to be an Avisynth v2.6 interface plugin
 - x64 build
 - Linux/GCC build
+- 10-16 bit and Y, planar YUV/RGB video formats support
 
 see CHANGELOG.md or the documentation
 
 Build instructions
 ------------------
+note: plugin is pure c++, there is no SIMD code inside
+
 ### Windows Visual Studio MSVC
 
 use IDE
@@ -37,14 +40,11 @@ use IDE
 
 ```
 del ..\CMakeCache.txt
-cmake .. -G "MinGW Makefiles" -DENABLE_INTEL_SIMD:bool=on
-@rem test: cmake .. -G "MinGW Makefiles" -DENABLE_INTEL_SIMD:bool=off
+cmake .. -G "MinGW Makefiles"
 cmake --build . --config Release
 ```
 
 ### Linux
-
-Note: ENABLE_INTEL_SIMD is automatically off for non-x86 architectures
 
 Clone repo and build
 
@@ -61,12 +61,6 @@ build after clean:
 
 ```
 cmake --build build --clean-first
-```
-
-Force no Intel x86-assembler support:
-
-```
-cmake -B build -S . -DENABLE_INTEL_SIMD:bool=off
 ```
 
 delete CMake cache:
