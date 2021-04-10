@@ -1,11 +1,12 @@
 /*
-**                 TNLMeans v1.0.3 for Avisynth 2.5.x
+**                 TNLMeans for Avisynth
 **
 **   TNLMeans is an implementation of the NL-means denoising algorithm.
 **   Aside from the original method, TNLMeans also supports extension
 **   into 3D, a faster, block based approach, and a multiscale version.
 **
 **   Copyright (C) 2006-2007 Kevin Stone
+**   Copyright (C) 2021 Ferenc Pintér
 **
 **   This program is free software; you can redistribute it and/or modify
 **   it under the terms of the GNU General Public License as published by
